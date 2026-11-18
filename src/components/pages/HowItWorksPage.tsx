@@ -9,6 +9,7 @@ import {
   Clock,
   Sparkles,
   Users,
+  Landmark,
 } from 'lucide-react';
 
 interface HowItWorksPageProps {
@@ -46,13 +47,34 @@ export const HowItWorksPage: React.FC<HowItWorksPageProps> = ({ onNavigate }) =>
     {
       num: '03',
       title: 'Collect Rewards & Expand Referral Network',
-      icon: TrendingUp,
-      summary: 'Direct USDT payouts to your balance and scaling referral tier daily caps.',
+      icon: Users,
+      summary: 'Direct USDT payouts to your balance and scaling referral tier mining rates.',
       details: [
         'Task rewards and mined AETHEL are credited directly into your verified sample ledger.',
-        'Use the secondary "Invest" button on your dashboard to allocate balance to 2.0% weekly yield contracts.',
-        'Share your unique referral link to unlock higher mining caps from 5 USDT up to 500 USDT/day.',
+        'Share your unique referral link to unlock higher mining rates from Bronze (10) up to Platinum (500) and earn 1.5% commission on referee investments.',
         'Withdraw funds directly to external USDT, Bitcoin, or Ethereum blockchain addresses.',
+      ],
+    },
+    {
+      num: '04',
+      title: 'Invest & Earn 2% Weekly',
+      icon: TrendingUp,
+      summary: 'Allocate wallet capital into investment terms earning 2.0% weekly returns.',
+      details: [
+        'Open Invest Now from your Balance modal or Wallet view to choose your preferred term horizon.',
+        'Track 2.0% growth intervals directly inside your clickable Active Invested card.',
+        'Unlock any portion of your active investment back to your available balance anytime for withdrawal.',
+      ],
+    },
+    {
+      num: '05',
+      title: 'Borrow & Pay 1.5% Monthly',
+      icon: Landmark,
+      summary: 'Access flexible platform borrowing at a transparent 1.5% monthly interest rate.',
+      details: [
+        'Click Borrow Now under Manage Funds or inside your Wallet view.',
+        'Enter your desired borrow amount and preview exact 1.5% monthly interest charges.',
+        'Continue transacting with deposits and investments on the platform to unlock credit access.',
       ],
     },
   ];
@@ -69,12 +91,12 @@ export const HowItWorksPage: React.FC<HowItWorksPageProps> = ({ onNavigate }) =>
             How Aethelgard Works
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            A transparent, three-step journey from onboarding to task completion, simulated mining, and institutional yield allocation.
+            A transparent, five-step journey from onboarding and tasks to mining, investing, and flexible borrowing.
           </p>
         </div>
 
-        {/* 3 Step Interactive Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 5 Step Interactive Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {steps.map((step, idx) => {
             const Icon = step.icon;
             const isSelected = activeStep === idx;
@@ -117,7 +139,7 @@ export const HowItWorksPage: React.FC<HowItWorksPageProps> = ({ onNavigate }) =>
                 </div>
 
                 <div className="pt-2 text-[11px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider flex items-center gap-1">
-                  <span>Step {idx + 1} of 3</span>
+                  <span>Step {idx + 1} of 5</span>
                 </div>
               </div>
             );

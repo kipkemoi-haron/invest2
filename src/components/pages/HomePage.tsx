@@ -57,11 +57,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Column: Headline & Action */}
             <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800/60 px-3 py-1.5 rounded-full">
-                <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
-                <span>Next-Gen Fintech Earning & Mining Ecosystem</span>
-              </div>
-
               <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-[1.15]">
                 Complete Micro-Tasks.{' '}
                 <span className="bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
@@ -122,34 +117,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                   alt="Aethelgard Fintech Dashboard & Yield Interface"
                   className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-700"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-
-                {/* Floating Metric Card */}
-                <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 p-3 sm:p-4 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700 text-xs text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <div className="text-[10px] text-teal-400 uppercase font-mono font-bold">
-                      Real-Time Platform Pulse
-                    </div>
-                    <div className="font-bold text-sm">
-                      38,420+ Tasks Verified Today
-                    </div>
-                  </div>
-                  <div className="sm:text-right font-mono">
-                    <div className="text-emerald-400 font-bold">$124,850+</div>
-                    <div className="text-[10px] text-slate-400">USDT Rewards Paid</div>
-                  </div>
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. "HOW IT WORKS" (Requirement: "How it works" - 3 steps) */}
+      {/* 2. "HOW IT WORKS" (5 steps) */}
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800">
         <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
           <span className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">
-            Clear Three-Step Process
+            Clear Five-Step Process
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             How It Works
@@ -159,7 +138,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* Step 1 */}
           <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-4 shadow-sm relative">
             <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400 font-mono text-xl font-bold flex items-center justify-center border border-teal-200/50 dark:border-teal-800/50">
@@ -196,6 +175,32 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               Earnings accumulate in real-time in your available sample ledger. Withdraw directly to your cold-storage USDT, BTC, or ETH wallets with audited double-entry safety.
+            </p>
+          </div>
+
+          {/* Step 4 */}
+          <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-4 shadow-sm relative">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-mono text-xl font-bold flex items-center justify-center border border-blue-200/50 dark:border-blue-800/50">
+              04
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              Invest & Earn 2% Weekly
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Allocate funds from your wallet to earn 2.0% weekly returns, track 24-hour compounding increases, and unlock your invested amount anytime for withdrawal.
+            </p>
+          </div>
+
+          {/* Step 5 */}
+          <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-4 shadow-sm relative">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 font-mono text-xl font-bold flex items-center justify-center border border-amber-200/50 dark:border-amber-800/50">
+              05
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              Borrow & Pay 1.5% Monthly
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Request flexible liquidity directly from your Balance or Wallet at a transparent 1.5% monthly interest rate as you keep transacting on the platform.
             </p>
           </div>
         </div>
