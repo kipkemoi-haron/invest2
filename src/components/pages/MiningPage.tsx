@@ -148,18 +148,13 @@ export const MiningPage: React.FC<MiningPageProps> = ({
           </h1>
         </div>
 
-        {/* Locked Funds / KYC Coming Soon Banner */}
-        <div className="w-full md:w-auto p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/70 flex items-center gap-4 shrink-0 shadow-sm">
-          <div className="p-2.5 rounded-xl bg-amber-500 text-white shrink-0">
-            <Lock className="w-5 h-5" />
+        {/* Awaiting KYC Banner */}
+        <div className="w-full md:w-auto px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/70 flex items-center gap-3 shrink-0 shadow-sm">
+          <div className="p-2 rounded-xl bg-amber-500 text-white shrink-0">
+            <Lock className="w-4 h-4" />
           </div>
-          <div className="min-w-0">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
-              Locked Funds · Awaiting KYC
-            </div>
-            <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-              KYC Unlock & Transfers — Coming Soon
-            </div>
+          <div className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+            Awaiting KYC
           </div>
         </div>
       </div>
@@ -227,7 +222,7 @@ export const MiningPage: React.FC<MiningPageProps> = ({
               <div className="absolute inset-7 rounded-full bg-slate-50/90 dark:bg-slate-950/85 border border-slate-100 dark:border-slate-800/80 flex flex-col items-center justify-center px-3 text-center">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-1">
                   <Lock className="w-3 h-3" />
-                  <span>Locked</span>
+                  <span>Awaiting KYC</span>
                 </span>
                 <div className="text-xl sm:text-2xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white tracking-tight leading-none max-w-full truncate">
                   {minedAethel.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -291,20 +286,20 @@ export const MiningPage: React.FC<MiningPageProps> = ({
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
                 <Lock className="w-3 h-3" />
-                <span>Locked · KYC Coming Soon</span>
+                <span>Awaiting KYC</span>
               </span>
             </div>
 
-            {/* Total Locked Balance */}
+            {/* Total Balance */}
             <div className="space-y-1">
-              <div className="text-xs text-slate-400">Locked Mined Balance (Awaiting KYC):</div>
+              <div className="text-xs text-slate-400">Mined Balance (Awaiting KYC):</div>
               <div className="text-2xl sm:text-4xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white tracking-tight break-words">
                 {minedAethel.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 <span className="text-sm font-semibold text-teal-600 dark:text-teal-400 ml-2">AETHEL</span>
               </div>
               <div className="text-sm font-mono text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1.5 pt-0.5">
                 <Lock className="w-4 h-4 shrink-0" />
-                <span>≈ ${usdtEquivalent} USDT (Locked Funds · Coming Soon)</span>
+                <span>≈ ${usdtEquivalent} USDT (Awaiting KYC)</span>
               </div>
             </div>
 
@@ -323,15 +318,15 @@ export const MiningPage: React.FC<MiningPageProps> = ({
                 </span>
               </div>
               <div className="flex flex-wrap justify-between gap-1 text-slate-500 dark:text-slate-400">
-                <span>Unlock Requirement:</span>
+                <span>Status:</span>
                 <span className="font-bold text-amber-600 dark:text-amber-400">
-                  KYC Verification (Coming Soon)
+                  Awaiting KYC
                 </span>
               </div>
             </div>
 
             <div className="text-[11px] text-slate-400">
-              *Mined AETHEL balances remain locked until KYC verification launches (Coming Soon). Sessions run 24 hours from 00:00:01 to 23:59:59 before closing.
+              *Mined AETHEL balances are Awaiting KYC. Sessions run 24 hours from 00:00:01 to 23:59:59 before closing.
             </div>
           </div>
 

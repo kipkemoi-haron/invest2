@@ -355,140 +355,90 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         {/* 1. STREAMLINED HOMEPAGE DASHBOARD */}
         {activeNav === 'dashboard' && (
           <div className="max-w-3xl mx-auto flex flex-col space-y-4">
-            {/* 1. Clickable Balance Card (Total Deposited + Investments) */}
+            {/* 1. Clickable Balance Card */}
             <button
               type="button"
               onClick={() => setBalanceModalOpen(true)}
-              className="w-full text-left p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500/60 dark:hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all space-y-3 cursor-pointer group"
+              className="w-full text-left p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500/60 dark:hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all space-y-4 cursor-pointer group"
             >
               <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                 <span className="font-semibold flex items-center gap-1.5">
                   <Wallet className="w-4 h-4 text-teal-500" />
-                  <span>Balance (Deposits + Investments)</span>
+                  <span>Balance</span>
                 </span>
-                <span className="flex items-center gap-1 font-mono text-[11px] text-teal-600 dark:text-teal-400 font-semibold">
-                  <span>USDT</span>
-                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                <span className="font-mono text-[11px] text-teal-600 dark:text-teal-400 font-semibold">
+                  USDT
                 </span>
               </div>
               <div className="text-3xl sm:text-4xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white break-words">
                 ${totalBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Deposited Available</span>
-                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                    ${depositedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Invested Amount</span>
-                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
-                    +${investedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
-                  </span>
-                </div>
-              </div>
-              <div className="text-[11px] text-teal-600 dark:text-teal-400 font-medium flex items-center justify-between pt-1">
-                <span>Tap to view balance breakdown, deposit &amp; withdraw</span>
-                <span className="font-mono">Manage Funds →</span>
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end text-xs">
+                <span className="text-teal-600 dark:text-teal-400 font-semibold flex items-center gap-1">
+                  <span>Manage Funds</span>
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </span>
               </div>
             </button>
 
-            {/* 2. Clickable Tasks Completed Card */}
+            {/* 2. Clickable Tasks Card */}
             <button
               type="button"
               onClick={() => {
                 setTasksOverviewTab('completed');
                 setTasksOverviewModalOpen(true);
               }}
-              className="w-full text-left p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500/60 dark:hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all space-y-3 cursor-pointer group"
+              className="w-full text-left p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500/60 dark:hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all space-y-4 cursor-pointer group"
             >
               <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                 <span className="font-semibold flex items-center gap-1.5">
                   <CheckSquare className="w-4 h-4 text-teal-500" />
-                  <span>Tasks Completed</span>
+                  <span>Tasks</span>
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
                   <Lock className="w-3 h-3" />
-                  <span>Locked Funds · KYC Coming Soon</span>
+                  <span>Awaiting KYC</span>
                 </span>
               </div>
-              <div className="flex items-baseline justify-between gap-3">
+              <div className="flex items-baseline gap-2">
                 <div className="text-3xl sm:text-4xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white">
                   {completedTasksList.length}
                 </div>
-                <div className="text-right">
-                  <div className="text-[11px] text-slate-400">Task Balance (Locked)</div>
-                  <div className="text-sm font-mono font-bold text-amber-600 dark:text-amber-400">
-                    ${lockedTaskBalanceUSDT.toFixed(2)} USDT
-                  </div>
-                </div>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Done</span>
               </div>
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                <span>Not Yet Done: <strong className="text-slate-700 dark:text-slate-300 font-mono">{pendingTasksList.length}</strong> · Upcoming: <strong className="text-amber-600 dark:text-amber-400 font-mono">{UPCOMING_TASK_CATEGORIES.length}</strong></span>
-                <span className="text-teal-600 dark:text-teal-400 font-semibold flex items-center gap-0.5">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end text-xs">
+                <span className="text-teal-600 dark:text-teal-400 font-semibold flex items-center gap-1">
                   <span>Open Tasks</span>
                   <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </div>
             </button>
 
-            {/* 3. Clickable Aethel Balance (Mining) Card */}
+            {/* 3. Clickable Mining Card */}
             <button
               type="button"
               onClick={() => setMiningModalOpen(true)}
               className="w-full text-left p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500/60 dark:hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all space-y-4 cursor-pointer group"
             >
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                  <span className="font-semibold flex items-center gap-1.5">
-                    <Zap className="w-4 h-4 text-teal-500" />
-                    <span>Aethel Balance (Mining)</span>
-                  </span>
-                  <span className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-teal-600 dark:text-teal-400">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        isMiningActive ? 'bg-emerald-500 animate-pulse' : isCycleClosed ? 'bg-amber-500' : 'bg-slate-400'
-                      }`}
-                    />
-                    <span>{isMiningActive ? 'Active' : isCycleClosed ? 'Closed (24H)' : 'Ready'}</span>
-                    <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </span>
-                </div>
-                <div className="text-3xl sm:text-4xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white">
-                  {fintechState.aethelBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
-                  <span className="text-sm font-semibold text-teal-600 dark:text-teal-400">AETHEL</span>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono font-medium">
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    ≈ ${(fintechState.aethelBalance * TOKEN_PRICE_USDT).toFixed(2)} USDT (${TOKEN_PRICE_USDT}/token)
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10px] font-sans font-bold">
-                    <Lock className="w-3 h-3" />
-                    <span>Locked · Awaiting KYC (Coming Soon)</span>
-                  </span>
-                </div>
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <Zap className="w-4 h-4 text-teal-500" />
+                  <span>Mining</span>
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                  <Lock className="w-3 h-3" />
+                  <span>Awaiting KYC</span>
+                </span>
               </div>
-
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-3 text-xs">
-                <div>
-                  <div className="text-[11px] text-slate-400">Mining Engine</div>
-                  <div className="font-mono font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                    {isMiningActive ? 'Running' : isCycleClosed ? 'Closed' : 'Tap to Start'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[11px] text-slate-400">Hash Rate</div>
-                  <div className="font-mono font-bold text-teal-600 dark:text-teal-400 mt-0.5">
-                    {fintechState.mining.hashRate.toFixed(2)} TH/s
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[11px] text-slate-400">Session Timer</div>
-                  <div className="font-mono font-bold tabular-nums text-slate-900 dark:text-white mt-0.5">
-                    {miningTimerDisplay}
-                  </div>
-                </div>
+              <div className="text-3xl sm:text-4xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white">
+                {fintechState.aethelBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                <span className="text-sm font-semibold text-teal-600 dark:text-teal-400">AETHEL</span>
+              </div>
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end text-xs">
+                <span className="text-teal-600 dark:text-teal-400 font-semibold flex items-center gap-1">
+                  <span>Open Mining</span>
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </span>
               </div>
             </button>
 
@@ -516,23 +466,18 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         {/* 2. TASK MARKETPLACE (Accessed via Hamburger Menu -> Tasks) */}
         {activeNav === 'tasks' && (
           <section className="space-y-6 pt-2">
-            {/* Locked Task Earnings Banner */}
+            {/* Task Balance Awaiting KYC Banner */}
             <div className="p-4 sm:p-5 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-amber-500 text-white shrink-0">
                   <Lock className="w-5 h-5" />
                 </div>
-                <div>
-                  <div className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
-                    Locked Funds · Awaiting KYC (Coming Soon)
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                    Task rewards accumulate in your Locked Task Balance until KYC verification launches.
-                  </p>
+                <div className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                  Awaiting KYC
                 </div>
               </div>
               <div className="text-left sm:text-right shrink-0">
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">Task Locked Balance</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">Task Balance</div>
                 <div className="text-xl font-extrabold font-mono text-amber-700 dark:text-amber-300">
                   ${lockedTaskBalanceUSDT.toFixed(2)} USDT
                 </div>
@@ -642,7 +587,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                         {isCompleted ? (
                           <div className="w-full min-h-[44px] py-2 px-3 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300/60 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1.5">
                             <CheckCircle2 className="w-4 h-4" />
-                            <span>Completed (Locked · Awaiting KYC)</span>
+                            <span>Completed · Awaiting KYC</span>
                           </div>
                         ) : (
                           <button
@@ -1020,56 +965,37 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         {activeNav === 'wallet' && (
           <section className="space-y-6">
             <div className="p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Wallet className="w-5 h-5 text-teal-500" />
-                  <span>Cryptocurrency Custody & Ledger</span>
-                </h3>
-                <span className="text-xs font-mono font-bold text-teal-600 dark:text-teal-400">
-                  Total: ${totalBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Total Balance (Deposits + Investments)</span>
-                  <span className="text-base font-extrabold font-mono text-slate-900 dark:text-white mt-0.5 block">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Total Balance</span>
+                  <span className="text-xl font-extrabold font-mono text-slate-900 dark:text-white mt-1 block">
                     ${totalBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
                   </span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Deposited Available</span>
-                  <span className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block">
-                    ${depositedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
-                  </span>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
                   <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Invested Amount</span>
-                  <span className="text-base font-extrabold font-mono text-blue-600 dark:text-blue-400 mt-0.5 block">
+                  <span className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400 mt-1 block">
                     ${investedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
                   </span>
                 </div>
               </div>
 
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Deposit digital assets or execute audited withdrawals directly to external Web3 cold-storage addresses.
-              </p>
-              <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-1">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={() => setDepositModalOpen(true)}
-                  className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-semibold hover:bg-teal-500 cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-semibold hover:bg-teal-500 cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <ArrowDownLeft className="w-4 h-4" />
-                  <span>Deposit Funds</span>
+                  <span>Deposit</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setWithdrawModalOpen(true)}
-                  className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <ArrowUpRight className="w-4 h-4" />
-                  <span>Request Withdrawal</span>
+                  <span>Withdraw</span>
                 </button>
               </div>
             </div>
@@ -1187,14 +1113,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 <div className="p-2 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
                   <Wallet className="w-5 h-5" />
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                    Balance &amp; Custody Overview
-                  </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Total deposited balances plus active investments
-                  </p>
-                </div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  Balance
+                </h2>
               </div>
               <button
                 type="button"
@@ -1209,15 +1130,12 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
             <div className="p-5 sm:p-6 space-y-5">
               <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950 text-white border border-slate-800 space-y-1.5">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-teal-300">
-                  Total Balance (Deposits + Investments)
+                  Total Balance
                 </span>
                 <div className="text-3xl sm:text-4xl font-extrabold font-mono tabular-nums">
                   ${totalBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
                   <span className="text-sm font-semibold text-teal-400">USDT</span>
                 </div>
-                <p className="text-[11px] text-slate-400">
-                  Increases automatically with new deposits and allocated investment capital.
-                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1226,7 +1144,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
                     ${depositedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
-                  <span className="text-[11px] text-slate-400 block">Liquid &amp; withdrawable</span>
                 </div>
 
                 <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1">
@@ -1234,7 +1151,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400">
                     ${investedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
-                  <span className="text-[11px] text-slate-400 block">Accruing 2.0% weekly</span>
                 </div>
               </div>
 
@@ -1260,7 +1176,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   className="w-full min-h-[44px] py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <ArrowUpRight className="w-4 h-4" />
-                  <span>Withdrawal</span>
+                  <span>Withdraw</span>
                 </button>
               </div>
             </div>
@@ -1268,7 +1184,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         </div>
       )}
 
-      {/* 2. Tasks Overview Modal (Completed, Not Yet Done, Upcoming + Locked Funds Awaiting KYC) */}
+      {/* 2. Tasks Overview Modal (Completed, Not Yet Done, Upcoming + Awaiting KYC) */}
       {tasksOverviewModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100 max-h-[90vh] flex flex-col">
@@ -1277,14 +1193,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 <div className="p-2 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
                   <CheckSquare className="w-5 h-5" />
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                    Tasks &amp; Locked Earnings
-                  </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Review completed tasks, remaining tasks, and upcoming task streams
-                  </p>
-                </div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  Tasks
+                </h2>
               </div>
               <button
                 type="button"
@@ -1297,19 +1208,14 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
             </div>
 
             <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
-              {/* Locked Task Balance Banner */}
+              {/* Task Balance Awaiting KYC Banner */}
               <div className="p-4 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/80 dark:bg-amber-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-amber-500 text-white shrink-0 mt-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-amber-500 text-white shrink-0">
                     <Lock className="w-4 h-4" />
                   </div>
-                  <div>
-                    <div className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                      Locked Funds · Awaiting KYC (Coming Soon)
-                    </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                      Task rewards are held in Locked Funds until KYC identity verification launches.
-                    </p>
+                  <div className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                    Awaiting KYC
                   </div>
                 </div>
                 <div className="text-left sm:text-right shrink-0">
@@ -1385,7 +1291,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                               +${task.rewardUSDT.toFixed(2)} USDT
                             </div>
                             <div className="text-[10px] text-amber-600 dark:text-amber-400 font-sans font-semibold">
-                              Locked · Awaiting KYC
+                              Awaiting KYC
                             </div>
                           </div>
                           <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
@@ -1475,7 +1381,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         </div>
       )}
 
-      {/* 3. Mining Control Modal (00:00:01 -> 23:59:59 Real-Time Counter + Locked KYC Balance) */}
+      {/* 3. Mining Control Modal (00:00:01 -> 23:59:59 Real-Time Counter + Awaiting KYC) */}
       {miningModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100">
@@ -1484,14 +1390,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 <div className="p-2 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
                   <Zap className="w-5 h-5" />
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                    AETHEL Mining Session
-                  </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    24-hour cycle counts 00:00:01 to 23:59:59 then closes
-                  </p>
-                </div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  Mining
+                </h2>
               </div>
               <button
                 type="button"
@@ -1504,15 +1405,15 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
             </div>
 
             <div className="p-5 sm:p-6 space-y-5">
-              {/* Locked Mined Balance Banner */}
+              {/* Mined Balance Banner */}
               <div className="p-4 rounded-2xl bg-slate-900 text-white border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-teal-300">
-                    Mined AETHEL Balance
+                    Mined Balance
                   </span>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-[10px] font-bold">
                     <Lock className="w-3 h-3" />
-                    <span>Locked · Awaiting KYC (Coming Soon)</span>
+                    <span>Awaiting KYC</span>
                   </span>
                 </div>
                 <div>
@@ -1521,7 +1422,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                     <span className="text-sm text-teal-400">AETHEL</span>
                   </div>
                   <div className="text-xs font-mono text-emerald-400 mt-0.5">
-                    ≈ ${(fintechState.aethelBalance * TOKEN_PRICE_USDT).toFixed(2)} USDT (${TOKEN_PRICE_USDT}/token · Locked awaiting KYC)
+                    ≈ ${(fintechState.aethelBalance * TOKEN_PRICE_USDT).toFixed(2)} USDT (${TOKEN_PRICE_USDT}/token · Awaiting KYC)
                   </div>
                 </div>
               </div>

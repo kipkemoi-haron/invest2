@@ -100,14 +100,14 @@ export const TaskExecutionModal: React.FC<TaskExecutionModalProps> = ({
                   Task completed (demo)
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-                  Your verification response has been logged and the rewards have been added to your Locked Funds (awaiting KYC — Coming Soon).
+                  Your verification response has been logged and the rewards are Awaiting KYC.
                 </p>
               </div>
 
               {/* Reward Badge */}
               <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-800/60 max-w-sm mx-auto flex flex-col sm:flex-row items-center justify-around gap-3 font-mono tabular-nums">
                 <div className="text-center">
-                  <div className="text-xs text-slate-500 dark:text-slate-400">Locked USDT (KYC Soon)</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">Awaiting KYC (USDT)</div>
                   <div className="text-lg font-bold text-amber-600 dark:text-amber-400">
                     +${task.rewardUSDT.toFixed(2)}
                   </div>
@@ -355,7 +355,7 @@ export const TaskExecutionModal: React.FC<TaskExecutionModalProps> = ({
                       Consecutive Login Streak: Day 6
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto mt-1">
-                      Claim today's check-in to boost your mining multiplier and earn USDT + AETHEL in Locked Funds (awaiting KYC).
+                      Claim today's check-in to boost your mining multiplier and earn USDT + AETHEL (Awaiting KYC).
                     </p>
                   </div>
                 </div>
