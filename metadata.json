@@ -1,0 +1,6 @@
+{
+  "name": "Aethelgard Capital - Institutional Digital Asset Management",
+  "description": "Sophisticated corporate digital asset wealth platform featuring double-entry ledger, secure cryptocurrency deposits, audited weekly returns, and full client & admin portals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

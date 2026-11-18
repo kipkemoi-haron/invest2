@@ -1,0 +1,239 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user account, KYC status, role, and persisted fintech balances.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "customerId": { "type": "string", "maxLength": 32, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "country": { "type": "string", "maxLength": 80 },
+        "role": { "type": "string", "enum": ["CLIENT", "ADMIN"] },
+        "kycStatus": { "type": "string", "enum": ["UNVERIFIED", "SUBMITTED", "VERIFIED", "REJECTED"] },
+        "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED"] },
+        "twoFactorEnabled": { "type": "boolean" },
+        "referralCode": { "type": "string", "maxLength": 40 },
+        "sampleBalanceUSDT": { "type": "number" },
+        "investedBalanceUSDT": { "type": "number" },
+        "aethelBalance": { "type": "number" },
+        "tasksCompletedCount": { "type": "number" },
+        "referralsCount": { "type": "number" },
+        "completedTaskIds": { "type": "array" },
+        "dailyStreak": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "customerId", "fullName", "email", "role", "kycStatus", "status", "twoFactorEnabled", "createdAt", "updatedAt"]
+    },
+    "AdminRole": {
+      "title": "AdminRole",
+      "description": "Trusted administrator access marker keyed by Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "CryptoWallet": {
+      "title": "CryptoWallet",
+      "description": "Company cryptocurrency deposit channel configuration.",
+      "type": "object",
+      "properties": {
+        "currency": { "type": "string", "enum": ["BTC", "ETH", "USDT"] },
+        "network": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "address": { "type": "string", "minLength": 10, "maxLength": 200 },
+        "qrCodeNote": { "type": "string", "maxLength": 500 },
+        "isActive": { "type": "boolean" },
+        "minDepositUSD": { "type": "number" },
+        "requiredConfirmations": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["currency", "network", "address", "isActive", "minDepositUSD", "requiredConfirmations", "updatedAt"]
+    },
+    "DepositRequest": {
+      "title": "DepositRequest",
+      "description": "Client cryptocurrency deposit request and verification state.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "customerId": { "type": "string", "maxLength": 32, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userEmail": { "type": "string", "format": "email", "maxLength": 200 },
+        "currency": { "type": "string", "enum": ["BTC", "ETH", "USDT"] },
+        "network": { "type": "string", "maxLength": 100 },
+        "walletAddress": { "type": "string", "maxLength": 200 },
+        "intendedAmountUSD": { "type": "number" },
+        "cryptoAmount": { "type": "string", "maxLength": 64 },
+        "txHash": { "type": "string", "maxLength": 160 },
+        "proofFileName": { "type": "string", "maxLength": 255 },
+        "status": { "type": "string", "enum": ["AWAITING_PAYMENT", "PENDING_CONFIRMATION", "UNDER_REVIEW", "CONFIRMED", "REJECTED"] },
+        "confirmations": { "type": "number" },
+        "requiredConfirmations": { "type": "number" },
+        "rejectionReason": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "customerId", "userEmail", "currency", "network", "walletAddress", "intendedAmountUSD", "status", "confirmations", "requiredConfirmations", "createdAt", "updatedAt"]
+    },
+    "Investment": {
+      "title": "Investment",
+      "description": "Client term investment allocation and accrued earnings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "customerId": { "type": "string", "maxLength": 32, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "principalAmountUSD": { "type": "number" },
+        "weeklyRate": { "type": "number" },
+        "durationWeeks": { "type": "number" },
+        "startDate": { "type": "string", "maxLength": 64 },
+        "maturityDate": { "type": "string", "maxLength": 64 },
+        "accumulatedEarningsUSD": { "type": "number" },
+        "lastAccrualDate": { "type": "string", "maxLength": 64 },
+        "nextAccrualDate": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["ACTIVE", "MATURED", "CANCELLED"] },
+        "termsApproved": { "type": "boolean" },
+        "termsVersion": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "customerId", "principalAmountUSD", "weeklyRate", "durationWeeks", "startDate", "maturityDate", "accumulatedEarningsUSD", "lastAccrualDate", "nextAccrualDate", "status", "termsApproved", "termsVersion", "createdAt", "updatedAt"]
+    },
+    "WithdrawalRequest": {
+      "title": "WithdrawalRequest",
+      "description": "Client withdrawal request awaiting compliance review and broadcast.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "customerId": { "type": "string", "maxLength": 32, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userEmail": { "type": "string", "format": "email", "maxLength": 200 },
+        "currency": { "type": "string", "enum": ["BTC", "ETH", "USDT"] },
+        "network": { "type": "string", "maxLength": 100 },
+        "destinationAddress": { "type": "string", "minLength": 10, "maxLength": 200 },
+        "amountUSD": { "type": "number" },
+        "feeUSD": { "type": "number" },
+        "netAmountUSD": { "type": "number" },
+        "status": { "type": "string", "enum": ["SUBMITTED", "PENDING_REVIEW", "APPROVED", "PROCESSING", "COMPLETED", "REJECTED"] },
+        "blockchainTxRef": { "type": "string", "maxLength": 160 },
+        "rejectionReason": { "type": "string", "maxLength": 300 },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "customerId", "userEmail", "currency", "network", "destinationAddress", "amountUSD", "feeUSD", "netAmountUSD", "status", "submittedAt", "updatedAt"]
+    },
+    "LedgerEntry": {
+      "title": "LedgerEntry",
+      "description": "Double-entry accounting transaction record for a client.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "customerId": { "type": "string", "maxLength": 32, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "type": { "type": "string", "enum": ["DEPOSIT_CONFIRMED", "INVESTMENT_COMMITTED", "INVESTMENT_EARNINGS", "INVESTMENT_PRINCIPAL_RELEASE", "WITHDRAWAL_LOCK", "WITHDRAWAL_PROCESSED", "WITHDRAWAL_REFUND"] },
+        "amountUSD": { "type": "number" },
+        "referenceId": { "type": "string", "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 500 },
+        "balanceAfterUSD": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "customerId", "type", "amountUSD", "referenceId", "description", "balanceAfterUSD", "createdAt"]
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "User account notification item.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "customerId": { "type": "string", "maxLength": 32, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "maxLength": 120 },
+        "message": { "type": "string", "maxLength": 500 },
+        "type": { "type": "string", "enum": ["DEPOSIT", "INVESTMENT", "EARNINGS", "WITHDRAWAL", "SECURITY", "SYSTEM"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "customerId", "title", "message", "type", "read", "createdAt", "updatedAt"]
+    },
+    "AuditLogItem": {
+      "title": "AuditLogItem",
+      "description": "Immutable platform compliance and authentication audit event.",
+      "type": "object",
+      "properties": {
+        "actorId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "actorEmail": { "type": "string", "format": "email", "maxLength": 200 },
+        "actorRole": { "type": "string", "enum": ["CLIENT", "ADMIN"] },
+        "action": { "type": "string", "maxLength": 100 },
+        "targetType": { "type": "string", "maxLength": 64 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["actorId", "actorEmail", "actorRole", "action", "targetType", "targetId", "details", "createdAt"]
+    },
+    "PlatformSettings": {
+      "title": "PlatformSettings",
+      "description": "Global platform configuration and legal clearance parameters.",
+      "type": "object",
+      "properties": {
+        "weeklyReturnRate": { "type": "number" },
+        "isReturnGuaranteed": { "type": "boolean" },
+        "minDepositUSD": { "type": "number" },
+        "minWithdrawalUSD": { "type": "number" },
+        "withdrawalFeePercentage": { "type": "number" },
+        "defaultTermDurationWeeks": { "type": "number" },
+        "legalTermsApproved": { "type": "boolean" },
+        "legalApprovalDate": { "type": "string", "maxLength": 32 },
+        "complianceReviewNote": { "type": "string", "maxLength": 500 },
+        "companyName": { "type": "string", "maxLength": 120 },
+        "supportEmail": { "type": "string", "maxLength": 200 },
+        "regulatoryJurisdiction": { "type": "string", "maxLength": 200 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["weeklyReturnRate", "isReturnGuaranteed", "minDepositUSD", "minWithdrawalUSD", "withdrawalFeePercentage", "defaultTermDurationWeeks", "legalTermsApproved", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile and persisted fintech balances."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRole" },
+      "description": "Admin role documents keyed by Firebase Auth UID."
+    },
+    "/wallets/{walletId}": {
+      "schema": { "$ref": "#/entities/CryptoWallet" },
+      "description": "Active company deposit wallet addresses."
+    },
+    "/deposits/{depositId}": {
+      "schema": { "$ref": "#/entities/DepositRequest" },
+      "description": "Client cryptocurrency deposit requests."
+    },
+    "/investments/{investmentId}": {
+      "schema": { "$ref": "#/entities/Investment" },
+      "description": "Client term investments."
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": { "$ref": "#/entities/WithdrawalRequest" },
+      "description": "Client withdrawal requests."
+    },
+    "/ledger/{entryId}": {
+      "schema": { "$ref": "#/entities/LedgerEntry" },
+      "description": "Double-entry ledger entries."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/NotificationItem" },
+      "description": "User account notifications."
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLogItem" },
+      "description": "Platform audit logs."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/PlatformSettings" },
+      "description": "Platform configuration parameters."
+    }
+  }
+}

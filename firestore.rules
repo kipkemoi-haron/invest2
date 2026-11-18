@@ -1,0 +1,449 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn()
+        && request.auth.token.email == 'markobare25@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin()
+        || (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+        'uid', 'customerId', 'fullName', 'email', 'role', 'kycStatus', 'status',
+        'twoFactorEnabled', 'sampleBalanceUSDT', 'investedBalanceUSDT', 'aethelBalance',
+        'tasksCompletedCount', 'referralsCount', 'completedTaskIds', 'dailyStreak',
+        'createdAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'uid', 'customerId', 'fullName', 'email', 'phone', 'country', 'role',
+        'kycStatus', 'status', 'twoFactorEnabled', 'referralCode',
+        'sampleBalanceUSDT', 'investedBalanceUSDT', 'aethelBalance',
+        'tasksCompletedCount', 'referralsCount', 'completedTaskIds', 'dailyStreak',
+        'createdAt', 'updatedAt'
+      ])
+      && isValidId(data.uid)
+      && isValidId(data.customerId)
+      && data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120
+      && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+      && (!('phone' in data) || (data.phone is string && data.phone.size() <= 40))
+      && (!('country' in data) || (data.country is string && data.country.size() <= 80))
+      && data.role in ['CLIENT', 'ADMIN']
+      && data.kycStatus in ['UNVERIFIED', 'SUBMITTED', 'VERIFIED', 'REJECTED']
+      && data.status in ['ACTIVE', 'SUSPENDED']
+      && data.twoFactorEnabled is bool
+      && (!('referralCode' in data) || (data.referralCode is string && data.referralCode.size() <= 40))
+      && data.sampleBalanceUSDT is number && data.sampleBalanceUSDT >= 0
+      && data.investedBalanceUSDT is number && data.investedBalanceUSDT >= 0
+      && data.aethelBalance is number && data.aethelBalance >= 0
+      && data.tasksCompletedCount is number && data.tasksCompletedCount >= 0
+      && data.referralsCount is number && data.referralsCount >= 0
+      && data.completedTaskIds is list && data.completedTaskIds.size() <= 100
+      && (data.completedTaskIds.size() == 0 || (data.completedTaskIds[0] is string && data.completedTaskIds[0].size() <= 64))
+      && data.dailyStreak is number && data.dailyStreak >= 0
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidWallet(data) {
+      return data.keys().hasAll([
+        'currency', 'network', 'address', 'isActive', 'minDepositUSD', 'requiredConfirmations', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'currency', 'network', 'address', 'qrCodeNote', 'isActive', 'minDepositUSD', 'requiredConfirmations', 'updatedAt'
+      ])
+      && data.currency in ['BTC', 'ETH', 'USDT']
+      && data.network is string && data.network.size() >= 1 && data.network.size() <= 100
+      && data.address is string && data.address.size() >= 10 && data.address.size() <= 200
+      && (!('qrCodeNote' in data) || (data.qrCodeNote is string && data.qrCodeNote.size() <= 500))
+      && data.isActive is bool
+      && data.minDepositUSD is number && data.minDepositUSD >= 0
+      && data.requiredConfirmations is number && data.requiredConfirmations >= 0
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidDeposit(data) {
+      return data.keys().hasAll([
+        'userId', 'customerId', 'userEmail', 'currency', 'network', 'walletAddress',
+        'intendedAmountUSD', 'status', 'confirmations', 'requiredConfirmations',
+        'createdAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'userId', 'customerId', 'userEmail', 'currency', 'network', 'walletAddress',
+        'intendedAmountUSD', 'cryptoAmount', 'txHash', 'proofFileName', 'status',
+        'confirmations', 'requiredConfirmations', 'rejectionReason',
+        'createdAt', 'updatedAt'
+      ])
+      && isValidId(data.userId)
+      && isValidId(data.customerId)
+      && data.userEmail is string && data.userEmail.size() >= 3 && data.userEmail.size() <= 200
+      && data.currency in ['BTC', 'ETH', 'USDT']
+      && data.network is string && data.network.size() >= 1 && data.network.size() <= 100
+      && data.walletAddress is string && data.walletAddress.size() >= 10 && data.walletAddress.size() <= 200
+      && data.intendedAmountUSD is number && data.intendedAmountUSD > 0
+      && (!('cryptoAmount' in data) || (data.cryptoAmount is string && data.cryptoAmount.size() <= 64))
+      && (!('txHash' in data) || (data.txHash is string && data.txHash.size() <= 160))
+      && (!('proofFileName' in data) || (data.proofFileName is string && data.proofFileName.size() <= 255))
+      && data.status in ['AWAITING_PAYMENT', 'PENDING_CONFIRMATION', 'UNDER_REVIEW', 'CONFIRMED', 'REJECTED']
+      && data.confirmations is number && data.confirmations >= 0
+      && data.requiredConfirmations is number && data.requiredConfirmations >= 0
+      && (!('rejectionReason' in data) || (data.rejectionReason is string && data.rejectionReason.size() <= 300))
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidInvestment(data) {
+      return data.keys().hasAll([
+        'userId', 'customerId', 'principalAmountUSD', 'weeklyRate', 'durationWeeks',
+        'startDate', 'maturityDate', 'accumulatedEarningsUSD', 'lastAccrualDate',
+        'nextAccrualDate', 'status', 'termsApproved', 'termsVersion', 'createdAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'userId', 'customerId', 'principalAmountUSD', 'weeklyRate', 'durationWeeks',
+        'startDate', 'maturityDate', 'accumulatedEarningsUSD', 'lastAccrualDate',
+        'nextAccrualDate', 'status', 'termsApproved', 'termsVersion', 'createdAt', 'updatedAt'
+      ])
+      && isValidId(data.userId)
+      && isValidId(data.customerId)
+      && data.principalAmountUSD is number && data.principalAmountUSD >= 100
+      && data.weeklyRate is number && data.weeklyRate > 0 && data.weeklyRate <= 0.1
+      && data.durationWeeks is number && data.durationWeeks >= 1
+      && data.startDate is string && data.startDate.size() <= 64
+      && data.maturityDate is string && data.maturityDate.size() <= 64
+      && data.accumulatedEarningsUSD is number && data.accumulatedEarningsUSD >= 0
+      && data.lastAccrualDate is string && data.lastAccrualDate.size() <= 64
+      && data.nextAccrualDate is string && data.nextAccrualDate.size() <= 64
+      && data.status in ['ACTIVE', 'MATURED', 'CANCELLED']
+      && data.termsApproved == true
+      && data.termsVersion is string && data.termsVersion.size() <= 32
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidWithdrawal(data) {
+      return data.keys().hasAll([
+        'userId', 'customerId', 'userEmail', 'currency', 'network', 'destinationAddress',
+        'amountUSD', 'feeUSD', 'netAmountUSD', 'status', 'submittedAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'userId', 'customerId', 'userEmail', 'currency', 'network', 'destinationAddress',
+        'amountUSD', 'feeUSD', 'netAmountUSD', 'status', 'blockchainTxRef', 'rejectionReason',
+        'submittedAt', 'updatedAt'
+      ])
+      && isValidId(data.userId)
+      && isValidId(data.customerId)
+      && data.userEmail is string && data.userEmail.size() >= 3 && data.userEmail.size() <= 200
+      && data.currency in ['BTC', 'ETH', 'USDT']
+      && data.network is string && data.network.size() >= 1 && data.network.size() <= 100
+      && data.destinationAddress is string && data.destinationAddress.size() >= 10 && data.destinationAddress.size() <= 200
+      && data.amountUSD is number && data.amountUSD > 0
+      && data.feeUSD is number && data.feeUSD >= 0
+      && data.netAmountUSD is number && data.netAmountUSD >= 0
+      && data.status in ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED', 'PROCESSING', 'COMPLETED', 'REJECTED']
+      && (!('blockchainTxRef' in data) || (data.blockchainTxRef is string && data.blockchainTxRef.size() <= 160))
+      && (!('rejectionReason' in data) || (data.rejectionReason is string && data.rejectionReason.size() <= 300))
+      && data.submittedAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidLedgerEntry(data) {
+      return data.keys().hasAll([
+        'userId', 'customerId', 'type', 'amountUSD', 'referenceId', 'description', 'balanceAfterUSD', 'createdAt'
+      ])
+      && data.keys().hasOnly([
+        'userId', 'customerId', 'type', 'amountUSD', 'referenceId', 'description', 'balanceAfterUSD', 'createdAt'
+      ])
+      && isValidId(data.userId)
+      && isValidId(data.customerId)
+      && data.type in [
+        'DEPOSIT_CONFIRMED', 'INVESTMENT_COMMITTED', 'INVESTMENT_EARNINGS',
+        'INVESTMENT_PRINCIPAL_RELEASE', 'WITHDRAWAL_LOCK', 'WITHDRAWAL_PROCESSED', 'WITHDRAWAL_REFUND'
+      ]
+      && data.amountUSD is number
+      && data.referenceId is string && data.referenceId.size() <= 128
+      && data.description is string && data.description.size() <= 500
+      && data.balanceAfterUSD is number
+      && data.createdAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll([
+        'userId', 'customerId', 'title', 'message', 'type', 'read', 'createdAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'userId', 'customerId', 'title', 'message', 'type', 'read', 'createdAt', 'updatedAt'
+      ])
+      && isValidId(data.userId)
+      && isValidId(data.customerId)
+      && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+      && data.message is string && data.message.size() >= 1 && data.message.size() <= 500
+      && data.type in ['DEPOSIT', 'INVESTMENT', 'EARNINGS', 'WITHDRAWAL', 'SECURITY', 'SYSTEM']
+      && data.read is bool
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll([
+        'actorId', 'actorEmail', 'actorRole', 'action', 'targetType', 'targetId', 'details', 'createdAt'
+      ])
+      && data.keys().hasOnly([
+        'actorId', 'actorEmail', 'actorRole', 'action', 'targetType', 'targetId', 'details', 'createdAt'
+      ])
+      && isValidId(data.actorId)
+      && data.actorEmail is string && data.actorEmail.size() >= 3 && data.actorEmail.size() <= 200
+      && data.actorRole in ['CLIENT', 'ADMIN']
+      && data.action is string && data.action.size() >= 1 && data.action.size() <= 100
+      && data.targetType is string && data.targetType.size() >= 1 && data.targetType.size() <= 64
+      && data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 128
+      && data.details is string && data.details.size() >= 1 && data.details.size() <= 500
+      && data.createdAt is timestamp;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll([
+        'weeklyReturnRate', 'isReturnGuaranteed', 'minDepositUSD', 'minWithdrawalUSD',
+        'withdrawalFeePercentage', 'defaultTermDurationWeeks', 'legalTermsApproved',
+        'legalApprovalDate', 'complianceReviewNote', 'companyName', 'supportEmail',
+        'regulatoryJurisdiction', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'weeklyReturnRate', 'isReturnGuaranteed', 'minDepositUSD', 'minWithdrawalUSD',
+        'withdrawalFeePercentage', 'defaultTermDurationWeeks', 'legalTermsApproved',
+        'legalApprovalDate', 'complianceReviewNote', 'companyName', 'supportEmail',
+        'regulatoryJurisdiction', 'updatedAt'
+      ])
+      && data.weeklyReturnRate is number && data.weeklyReturnRate > 0 && data.weeklyReturnRate <= 0.1
+      && data.isReturnGuaranteed is bool
+      && data.minDepositUSD is number && data.minDepositUSD >= 0
+      && data.minWithdrawalUSD is number && data.minWithdrawalUSD >= 0
+      && data.withdrawalFeePercentage is number && data.withdrawalFeePercentage >= 0 && data.withdrawalFeePercentage <= 0.25
+      && data.defaultTermDurationWeeks is number && data.defaultTermDurationWeeks >= 1
+      && data.legalTermsApproved is bool
+      && data.legalApprovalDate is string && data.legalApprovalDate.size() <= 32
+      && data.complianceReviewNote is string && data.complianceReviewNote.size() <= 500
+      && data.companyName is string && data.companyName.size() <= 120
+      && data.supportEmail is string && data.supportEmail.size() <= 200
+      && data.regulatoryJurisdiction is string && data.regulatoryJurisdiction.size() <= 200
+      && data.updatedAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+
+    // 1. Users (PII restricted strictly to owner or admin)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().role == 'CLIENT'
+        && incoming().kycStatus == 'UNVERIFIED'
+        && incoming().status == 'ACTIVE'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().customerId == existing().customerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            isOwner(userId)
+            && incoming().role == existing().role
+            && incoming().status == existing().status
+            && (
+              // Action: Update fintech task/mining/balance state
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'sampleBalanceUSDT', 'investedBalanceUSDT', 'aethelBalance',
+                'tasksCompletedCount', 'completedTaskIds', 'dailyStreak', 'updatedAt'
+              ])
+              // Action: Submit KYC or update profile contact info
+              || (
+                incoming().diff(existing()).affectedKeys().hasOnly([
+                  'fullName', 'phone', 'country', 'twoFactorEnabled', 'kycStatus', 'updatedAt'
+                ])
+                && (incoming().kycStatus == existing().kycStatus || incoming().kycStatus == 'SUBMITTED')
+              )
+            )
+          )
+        );
+    }
+
+    // 2. Admins Registry
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow create, update, delete: if isValidId(userId) && isBootstrappedAdmin();
+    }
+
+    // 3. Company Wallets
+    match /wallets/{walletId} {
+      allow get: if isValidId(walletId) && isSignedIn() && (existing().isActive == true || isAdmin());
+      allow list: if isSignedIn() && (existing().isActive == true || isBootstrappedAdmin());
+      allow create: if isValidId(walletId) && isAdmin() && isValidWallet(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(walletId) && isAdmin() && isValidWallet(incoming()) && incoming().updatedAt == request.time;
+    }
+
+    // 4. Deposits
+    match /deposits/{depositId} {
+      allow get: if isValidId(depositId) && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(depositId)
+        && isSignedIn()
+        && isValidDeposit(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().status in ['AWAITING_PAYMENT', 'PENDING_CONFIRMATION']
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(depositId)
+        && isValidDeposit(incoming())
+        && incoming().userId == existing().userId
+        && incoming().customerId == existing().customerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            isOwner(existing().userId)
+            && !(existing().status in ['CONFIRMED', 'REJECTED'])
+            && incoming().diff(existing()).affectedKeys().hasOnly(['txHash', 'proofFileName', 'status', 'confirmations', 'updatedAt'])
+            && incoming().status == 'PENDING_CONFIRMATION'
+          )
+        );
+    }
+
+    // 5. Investments
+    match /investments/{investmentId} {
+      allow get: if isValidId(investmentId) && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(investmentId)
+        && isSignedIn()
+        && isValidInvestment(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'ACTIVE'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(investmentId)
+        && isAdmin()
+        && isValidInvestment(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+    }
+
+    // 6. Withdrawals
+    match /withdrawals/{withdrawalId} {
+      allow get: if isValidId(withdrawalId) && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(withdrawalId)
+        && isSignedIn()
+        && isValidWithdrawal(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'SUBMITTED'
+        && incoming().submittedAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(withdrawalId)
+        && isAdmin()
+        && isValidWithdrawal(incoming())
+        && incoming().userId == existing().userId
+        && incoming().submittedAt == existing().submittedAt
+        && incoming().updatedAt == request.time;
+    }
+
+    // 7. Double-Entry Ledger
+    match /ledger/{entryId} {
+      allow get: if isValidId(entryId) && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(entryId)
+        && isSignedIn()
+        && isValidLedgerEntry(incoming())
+        && incoming().createdAt == request.time
+        && (
+          isAdmin()
+          || (
+            incoming().userId == request.auth.uid
+            && incoming().type in ['INVESTMENT_COMMITTED', 'WITHDRAWAL_LOCK']
+          )
+        );
+    }
+
+    // 8. Notifications
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId) && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(notificationId)
+        && isSignedIn()
+        && isValidNotification(incoming())
+        && (incoming().userId == request.auth.uid || isAdmin())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(notificationId)
+        && isValidNotification(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && isOwner(existing().userId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['read', 'updatedAt']);
+    }
+
+    // 9. Audit Logs
+    match /auditLogs/{logId} {
+      allow get: if isValidId(logId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(logId)
+        && isSignedIn()
+        && isValidAuditLog(incoming())
+        && incoming().createdAt == request.time
+        && (
+          isAdmin()
+          || (incoming().actorId == request.auth.uid && incoming().actorRole == 'CLIENT')
+        );
+    }
+
+    // 10. Platform Settings
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId) && isSignedIn();
+      allow create, update: if isValidId(settingId)
+        && isAdmin()
+        && isValidSettings(incoming())
+        && incoming().updatedAt == request.time;
+    }
+  }
+}

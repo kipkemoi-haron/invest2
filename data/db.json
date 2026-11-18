@@ -1,0 +1,260 @@
+{
+  "users": [
+    {
+      "id": "usr-admin-01",
+      "customerId": "ADM-001",
+      "fullName": "Marcus Vance, CIO",
+      "email": "admin@aethelgard.com",
+      "phone": "+44 20 7946 0912",
+      "country": "United Kingdom",
+      "role": "ADMIN",
+      "kycStatus": "VERIFIED",
+      "status": "ACTIVE",
+      "twoFactorEnabled": true,
+      "createdAt": "2026-01-10T08:00:00.000Z",
+      "salt": "3b2d976cafa4f96670c9145588579838",
+      "passwordHash": "11a204bab1938f6967cb5a1d15e3232dccaa9e0c19486d6f39cdb2b18b4f9876248cb23f550817a9613cb95754598a152b84f133eff0bd869f6e5210582a47a7"
+    },
+    {
+      "id": "usr-client-01",
+      "customerId": "CLT-8921",
+      "fullName": "Jane Toni",
+      "email": "janeatoni3@gmail.com",
+      "phone": "+1 (555) 382-9104",
+      "country": "United States",
+      "role": "CLIENT",
+      "kycStatus": "VERIFIED",
+      "status": "ACTIVE",
+      "twoFactorEnabled": false,
+      "createdAt": "2026-02-01T10:15:00.000Z",
+      "salt": "be42f0492182e813ee725229ea9d60ac",
+      "passwordHash": "9951a6c89161c362c5cea4ac69a3d42da5d08227b000658f1169a68e8ec7bbf49e1885d6f2d87e565225377b1ddebe1b05151ddf6b9a7b30764eee25e7c39480"
+    }
+  ],
+  "wallets": [
+    {
+      "id": "w-btc-1",
+      "currency": "BTC",
+      "network": "Bitcoin Mainnet (SegWit)",
+      "address": "bc1q9x3d8h6zkm0f92nv7a5xypk4el8rq2s4u5c3wq",
+      "qrCodeNote": "Only send native Bitcoin (BTC) to this address. Minimum 3 confirmations required.",
+      "isActive": true,
+      "minDepositUSD": 100,
+      "requiredConfirmations": 3,
+      "updatedAt": "2026-11-15T17:45:34.364Z"
+    },
+    {
+      "id": "w-eth-1",
+      "currency": "ETH",
+      "network": "Ethereum (ERC-20)",
+      "address": "0x71C8A60e42562476bDa912079f53e346513A1f34",
+      "qrCodeNote": "Only send Ether (ETH) via Ethereum Mainnet. Smart contract internal deposits supported.",
+      "isActive": true,
+      "minDepositUSD": 100,
+      "requiredConfirmations": 12,
+      "updatedAt": "2026-11-15T17:45:34.365Z"
+    },
+    {
+      "id": "w-usdt-erc20",
+      "currency": "USDT",
+      "network": "Ethereum (USDT ERC-20)",
+      "address": "0x71C8A60e42562476bDa912079f53e346513A1f34",
+      "qrCodeNote": "Tether USD on Ethereum ERC-20. Do not send non-ERC20 tokens.",
+      "isActive": true,
+      "minDepositUSD": 100,
+      "requiredConfirmations": 12,
+      "updatedAt": "2026-11-15T17:45:34.365Z"
+    },
+    {
+      "id": "w-usdt-trc20",
+      "currency": "USDT",
+      "network": "Tron (USDT TRC-20)",
+      "address": "TYDZSxdvvdE45g8n7m9wM2yYpPq2wZz1K",
+      "qrCodeNote": "Fast low-fee Tether TRC-20 deposit channel. 19 confirmations required.",
+      "isActive": true,
+      "minDepositUSD": 100,
+      "requiredConfirmations": 19,
+      "updatedAt": "2026-11-15T17:45:34.365Z"
+    }
+  ],
+  "deposits": [
+    {
+      "id": "dep-seed-01",
+      "customerId": "CLT-8921",
+      "userEmail": "janeatoni3@gmail.com",
+      "currency": "USDT",
+      "network": "Ethereum (USDT ERC-20)",
+      "walletAddress": "0x71C8A60e42562476bDa912079f53e346513A1f34",
+      "intendedAmountUSD": 5000,
+      "cryptoAmount": "5,000.00 USDT",
+      "txHash": "0x8f3c7e912ab45091823759238475293847589234857293845729348572938475",
+      "status": "CONFIRMED",
+      "confirmations": 24,
+      "requiredConfirmations": 12,
+      "blockchainVerification": {
+        "verified": true,
+        "blockNumber": 21948291,
+        "senderAddress": "0x9a3e2...41bc",
+        "actualAmount": "5000.00 USDT",
+        "verifiedAt": "2026-02-02T14:22:00.000Z"
+      },
+      "createdAt": "2026-02-02T14:00:00.000Z",
+      "updatedAt": "2026-02-02T14:25:00.000Z"
+    }
+  ],
+  "investments": [
+    {
+      "id": "inv-seed-01",
+      "customerId": "CLT-8921",
+      "principalAmountUSD": 2500,
+      "weeklyRate": 0.02,
+      "durationWeeks": 12,
+      "startDate": "2026-02-05T00:00:00.000Z",
+      "maturityDate": "2026-04-30T00:00:00.000Z",
+      "accumulatedEarningsUSD": 150,
+      "lastAccrualDate": "2026-11-15T17:45:34.383Z",
+      "nextAccrualDate": "2026-02-26T00:00:00.000Z",
+      "status": "MATURED",
+      "termsApproved": true,
+      "termsVersion": "v2.4-2026",
+      "createdAt": "2026-02-05T09:30:00.000Z"
+    }
+  ],
+  "withdrawals": [],
+  "ledger": [
+    {
+      "id": "led-001",
+      "customerId": "CLT-8921",
+      "type": "DEPOSIT_CONFIRMED",
+      "amountUSD": 5000,
+      "referenceId": "dep-seed-01",
+      "description": "USDT (ERC-20) Deposit Confirmed on-chain (Tx 0x8f3c...8475)",
+      "balanceAfterUSD": 5000,
+      "timestamp": "2026-02-02T14:25:00.000Z"
+    },
+    {
+      "id": "led-002",
+      "customerId": "CLT-8921",
+      "type": "INVESTMENT_COMMITTED",
+      "amountUSD": -2500,
+      "referenceId": "inv-seed-01",
+      "description": "Capital Allocated to 12-Week Weekly 2.0% Term (Principal Locked)",
+      "balanceAfterUSD": 2500,
+      "timestamp": "2026-02-05T09:30:00.000Z"
+    },
+    {
+      "id": "led-003",
+      "customerId": "CLT-8921",
+      "type": "INVESTMENT_EARNINGS",
+      "amountUSD": 50,
+      "referenceId": "inv-seed-01",
+      "description": "Weekly Yield Distribution (2.0% on $2,500 Principal) - Week 1",
+      "balanceAfterUSD": 2550,
+      "timestamp": "2026-02-12T00:00:00.000Z"
+    },
+    {
+      "id": "led-004",
+      "customerId": "CLT-8921",
+      "type": "INVESTMENT_EARNINGS",
+      "amountUSD": 50,
+      "referenceId": "inv-seed-01",
+      "description": "Weekly Yield Distribution (2.0% on $2,500 Principal) - Week 2",
+      "balanceAfterUSD": 2600,
+      "timestamp": "2026-02-19T00:00:00.000Z"
+    },
+    {
+      "id": "led-mwi4l033-lmvyd",
+      "customerId": "CLT-8921",
+      "type": "INVESTMENT_PRINCIPAL_RELEASE",
+      "amountUSD": 2500,
+      "referenceId": "inv-seed-01",
+      "description": "Matured Principal Released: $2,500 USD returned to Available Balance.",
+      "balanceAfterUSD": 5100,
+      "timestamp": "2026-11-15T17:45:34.383Z"
+    },
+    {
+      "id": "led-mwi4l083-ee5i0",
+      "customerId": "CLT-8921",
+      "type": "INVESTMENT_EARNINGS",
+      "amountUSD": 50,
+      "referenceId": "inv-seed-01",
+      "description": "Weekly Earnings Distribution: 2.0% on $2,500 USD Principal",
+      "balanceAfterUSD": 5150,
+      "timestamp": "2026-11-15T17:45:34.383Z"
+    }
+  ],
+  "settings": {
+    "weeklyReturnRate": 0.02,
+    "isReturnGuaranteed": false,
+    "minDepositUSD": 100,
+    "minWithdrawalUSD": 50,
+    "withdrawalFeePercentage": 0.01,
+    "defaultTermDurationWeeks": 12,
+    "legalTermsApproved": true,
+    "legalApprovalDate": "2026-09-15",
+    "complianceReviewNote": "Legal and financial framework approved by Investment Oversight Committee. Discretionary yields subject to platform terms.",
+    "companyName": "Aethelgard Capital Management Ltd.",
+    "supportEmail": "compliance@aethelgard.com",
+    "regulatoryJurisdiction": "Institutional Digital Asset Registry, Entity #AC-8921-EU"
+  },
+  "notifications": [
+    {
+      "id": "notif-01",
+      "customerId": "CLT-8921",
+      "title": "Deposit Confirmed",
+      "message": "Your deposit of $5,000.00 USDT has completed 24 blockchain confirmations and is credited to your available balance.",
+      "type": "DEPOSIT",
+      "read": false,
+      "timestamp": "2026-02-02T14:25:00.000Z"
+    },
+    {
+      "id": "notif-02",
+      "customerId": "CLT-8921",
+      "title": "Investment Activated",
+      "message": "Your $2,500.00 investment in the 2.0% Weekly Term has been activated. First distribution accrued.",
+      "type": "INVESTMENT",
+      "read": false,
+      "timestamp": "2026-02-05T09:30:00.000Z"
+    },
+    {
+      "id": "notif-03",
+      "customerId": "CLT-8921",
+      "title": "Weekly Earnings Credited",
+      "message": "$50.00 has been credited to your available balance from Investment #inv-seed-01.",
+      "type": "EARNINGS",
+      "read": true,
+      "timestamp": "2026-02-19T00:00:00.000Z"
+    },
+    {
+      "id": "notif-mwi4l083-yokpg",
+      "customerId": "CLT-8921",
+      "title": "Investment Term Matured",
+      "message": "Your investment #inv-seed-01 has reached full term maturity. Principal of $2,500 USD has been returned to your available balance.",
+      "type": "INVESTMENT",
+      "read": false,
+      "timestamp": "2026-11-15T17:45:34.563Z"
+    },
+    {
+      "id": "notif-mwi4l083-u8wu5",
+      "customerId": "CLT-8921",
+      "title": "Weekly Earnings Credited",
+      "message": "$50.00 USD credited to your available balance from Investment #inv-seed-01.",
+      "type": "EARNINGS",
+      "read": false,
+      "timestamp": "2026-11-15T17:45:34.563Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "aud-001",
+      "actorId": "system",
+      "actorEmail": "system@aethelgard.internal",
+      "actorRole": "ADMIN",
+      "action": "PLATFORM_INITIALIZATION",
+      "targetType": "SYSTEM",
+      "targetId": "AC-GENESIS",
+      "details": "Institutional ledger booted with initial cryptographic wallet configurations and legal parameter checks.",
+      "timestamp": "2026-01-01T00:00:00.000Z"
+    }
+  ]
+}
