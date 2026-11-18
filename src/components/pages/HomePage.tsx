@@ -53,10 +53,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       {/* 1. HERO SECTION */}
       <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-gradient-to-b from-teal-50/50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 pt-12 pb-16 lg:pt-20 lg:pb-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Column: Headline & Action */}
-            <div className="lg:col-span-7 space-y-6">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="space-y-6">
               <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-[1.15]">
                 Complete Micro-Tasks.{' '}
                 <span className="bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
@@ -107,19 +105,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                   <span>Up to 500 USDT Daily Cap</span>
                 </div>
               </div>
-            </div>
-
-            {/* Right Column: Hero High-Tech Visual */}
-            <div className="lg:col-span-5 relative min-w-0">
-              <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl bg-slate-950 group">
-                <img
-                  src="/src/assets/images/fintech_task_hero_1794218673954.jpg"
-                  alt="Aethelgard Fintech Dashboard & Yield Interface"
-                  className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
-              </div>
-            </div>
           </div>
         </div>
       </section>
