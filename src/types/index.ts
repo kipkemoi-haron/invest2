@@ -234,6 +234,7 @@ export interface InvitedFriend {
   name: string;
   maskedEmail: string;
   joinedDate: string;
+  investedAmountUSDT: number;
   tasksCompleted: number;
   miningActive: boolean;
   commissionEarnedUSDT: number;
@@ -245,6 +246,8 @@ export interface ReferralTier {
   name: string;
   minReferrals: number;
   maxReferrals: number | null;
+  miningRateMultiplier: number;
+  miningRatePercent: number;
   commissionRate: number;
   dailyMiningCapUSDT: number;
   perks: string[];

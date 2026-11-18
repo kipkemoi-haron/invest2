@@ -29,20 +29,22 @@ import {
   Video,
   ThumbsUp,
   Instagram,
+  Landmark,
 } from 'lucide-react';
 import {
   INITIAL_TASKS,
   UPCOMING_TASK_CATEGORIES,
-  REFERRAL_TIERS,
   TOKEN_PRICE_USDT,
   MAX_MINING_SECONDS,
   CYCLE_DURATION_SECONDS,
   AETHEL_PER_SECOND,
+  BASE_HASH_RATE_TH,
   INVESTMENT_24H_RATE,
   CYCLE_24H_MS,
   formatMiningTimer,
   formatCountdownTimer,
   computeLockedTaskBalanceUSDT,
+  getReferralTierForCount,
   type InvestmentAccrualRecord,
   type UserFintechState,
 } from '../../lib/fintechData.ts';
@@ -52,6 +54,7 @@ import { TaskExecutionModal } from './TaskExecutionModal.tsx';
 import { SimulatedInvestModal } from './SimulatedInvestModal.tsx';
 import { DepositModal } from './DepositModal.tsx';
 import { WithdrawModal } from './WithdrawModal.tsx';
+import { BorrowModal } from './BorrowModal.tsx';
 
 interface ClientDashboardProps {
   onNavigate?: (view: string) => void;
@@ -92,12 +95,17 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   // Action Modals
   const [activeTaskModal, setActiveTaskModal] = useState<TaskItem | null>(null);
   const [investModalOpen, setInvestModalOpen] = useState<boolean>(false);
+  const [borrowModalOpen, setBorrowModalOpen] = useState<boolean>(false);
   const [depositModalOpen, setDepositModalOpen] = useState<boolean>(false);
   const [withdrawModalOpen, setWithdrawModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Wall-clock tick for real-time 00:00:01 -> 23:59:59 mining counter & 24h investment countdown
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  const activeTier = getReferralTierForCount(fintechState.referralsCount);
+  const effectiveAethelPerSecond = AETHEL_PER_SECOND * activeTier.miningRateMultiplier;
+  const effectiveHashRate = Number((BASE_HASH_RATE_TH * activeTier.miningRateMultiplier).toFixed(2));
 
   useEffect(() => {
     setActiveNav(normalizeTab(initialTab));
@@ -115,7 +123,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
       const rawElapsed = Math.max(1, Math.floor((current - sessionStartedAt) / 1000));
 
       if (rawElapsed >= CYCLE_DURATION_SECONDS) {
-        const finalSessionMined = MAX_MINING_SECONDS * AETHEL_PER_SECOND;
+        const finalSessionMined = MAX_MINING_SECONDS * effectiveAethelPerSecond;
         onUpdateFintechState((prev) => {
           if (prev.mining.sessionClosed) return prev;
           const base = prev.mining.sessionBaseAethel ?? prev.aethelBalance;
@@ -130,6 +138,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
               sessionElapsedSeconds: MAX_MINING_SECONDS,
               sessionMinedAethel: finalSessionMined,
               totalMinedAethel: finalTotal,
+              hashRate: effectiveHashRate,
+              dailyCapUSDT: activeTier.dailyMiningCapUSDT,
             },
           };
           if (user && cloudLoaded) {
@@ -141,7 +151,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         onUpdateFintechState((prev) => {
           if (!prev.mining.isMining) return prev;
           const base = prev.mining.sessionBaseAethel ?? prev.aethelBalance;
-          const sessionMined = rawElapsed * AETHEL_PER_SECOND;
+          const sessionMined = rawElapsed * effectiveAethelPerSecond;
           const total = base + sessionMined;
           return {
             ...prev,
@@ -151,6 +161,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
               sessionElapsedSeconds: rawElapsed,
               sessionMinedAethel: sessionMined,
               totalMinedAethel: total,
+              hashRate: effectiveHashRate,
+              dailyCapUSDT: activeTier.dailyMiningCapUSDT,
             },
           };
         });
@@ -160,7 +172,16 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     syncTick();
     const interval = setInterval(syncTick, 1000);
     return () => clearInterval(interval);
-  }, [isMining, sessionStartedAt, user, cloudLoaded, onUpdateFintechState]);
+  }, [
+    isMining,
+    sessionStartedAt,
+    effectiveAethelPerSecond,
+    effectiveHashRate,
+    activeTier.dailyMiningCapUSDT,
+    user,
+    cloudLoaded,
+    onUpdateFintechState,
+  ]);
 
   // Real-time 24-hour 2.0% investment accrual & live countdown tick
   useEffect(() => {
@@ -262,7 +283,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
           sessionStartedAt: startedAt,
           sessionElapsedSeconds: 1,
           sessionBaseAethel: prev.aethelBalance,
-          sessionMinedAethel: AETHEL_PER_SECOND,
+          sessionMinedAethel: effectiveAethelPerSecond,
+          hashRate: effectiveHashRate,
+          dailyCapUSDT: activeTier.dailyMiningCapUSDT,
         },
       };
       if (user && cloudLoaded) {
@@ -433,9 +456,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   };
 
   // Financial & Task Computations
-  const depositedBalanceUSDT = fintechState.sampleBalanceUSDT;
   const investedBalanceUSDT = fintechState.investedBalanceUSDT;
-  const totalBalanceUSDT = depositedBalanceUSDT + investedBalanceUSDT;
+  const totalBalanceUSDT = fintechState.sampleBalanceUSDT + investedBalanceUSDT;
 
   const completedTasksList = INITIAL_TASKS.filter((t) =>
     fintechState.completedTaskIds.includes(t.id)
@@ -463,13 +485,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     : 0;
   const miningTimerDisplay = formatMiningTimer(displayElapsed);
   const miningProgressPercent = Math.min(100, (displayElapsed / MAX_MINING_SECONDS) * 100);
-
-  const activeTier =
-    REFERRAL_TIERS.find(
-      (t) =>
-        fintechState.referralsCount >= t.minReferrals &&
-        (t.maxReferrals === null || fintechState.referralsCount <= t.maxReferrals)
-    ) || REFERRAL_TIERS[0];
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
@@ -583,7 +598,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
             </button>
 
             {/* 4. Referrals Card (Strictly Last Item at Bottom) */}
-            <section className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
+            <button
+              type="button"
+              onClick={() => onNavigate?.('referrals')}
+              className="w-full text-left p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500/60 dark:hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all space-y-3 cursor-pointer group"
+            >
               <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                 <span className="font-semibold">Referrals</span>
                 <Users className="w-4 h-4 text-teal-500" />
@@ -593,13 +612,14 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
               </div>
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <span className="font-mono font-semibold text-teal-600 dark:text-teal-400">
-                  {activeTier.name} ({(activeTier.commissionRate * 100).toFixed(0)}% Task Comm.)
+                  {activeTier.name} · {activeTier.miningRatePercent}% Mining Rate · 1.5% Inv. Comm.
                 </span>
-                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                  ${activeTier.dailyMiningCapUSDT.toFixed(0)} USDT/day cap
+                <span className="text-teal-600 dark:text-teal-400 font-semibold flex items-center gap-1">
+                  <span>Open Referrals</span>
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </div>
-            </section>
+            </button>
           </div>
         )}
 
@@ -899,18 +919,27 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 </div>
               </div>
 
-              {/* 4. Invest Now Button */}
-              <div>
+              {/* 4. Invest Now & Borrow Now Buttons */}
+              <div className="flex flex-col items-start gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedInvestTerm(12);
                     setInvestModalOpen(true);
                   }}
-                  className="w-full sm:w-auto min-h-[44px] px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-64 min-h-[44px] px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <TrendingUp className="w-4 h-4" />
                   <span>INVEST NOW</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setBorrowModalOpen(true)}
+                  className="w-full sm:w-64 min-h-[44px] px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Landmark className="w-4 h-4" />
+                  <span>BORROW NOW</span>
                 </button>
               </div>
             </div>
@@ -1019,11 +1048,20 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         }}
       />
 
-      {/* 1. Balance Breakdown Modal (Deposited + Invested + Deposit/Withdraw Actions) */}
+      <BorrowModal
+        isOpen={borrowModalOpen}
+        onClose={() => setBorrowModalOpen(false)}
+        onContinueTransacting={() => {
+          setActiveNav('wallet');
+          onNavigate?.('wallet');
+        }}
+      />
+
+      {/* 1. Balance Breakdown Modal (Total Balance + Invested Amount + Deposit/Withdraw + Invest Now + Borrow Now) */}
       {balanceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100">
-            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70">
+          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl text-slate-900 dark:text-slate-100">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70 sticky top-0 z-10 backdrop-blur-md">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
                   <Wallet className="w-5 h-5" />
@@ -1053,19 +1091,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1">
-                  <span className="text-xs text-slate-500 dark:text-slate-400">Deposited Balance</span>
-                  <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                    ${depositedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1">
-                  <span className="text-xs text-slate-500 dark:text-slate-400">Invested Amount</span>
-                  <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400">
-                    ${investedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Invested Amount</span>
+                <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400">
+                  ${investedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                  <span className="text-xs font-semibold text-slate-400">USDT</span>
                 </div>
               </div>
 
@@ -1092,6 +1122,33 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 >
                   <ArrowUpRight className="w-4 h-4" />
                   <span>Withdraw</span>
+                </button>
+              </div>
+
+              <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBalanceModalOpen(false);
+                    setSelectedInvestTerm(12);
+                    setInvestModalOpen(true);
+                  }}
+                  className="w-full min-h-[44px] py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  <span>INVEST NOW</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBalanceModalOpen(false);
+                    setBorrowModalOpen(true);
+                  }}
+                  className="w-full min-h-[44px] py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Landmark className="w-4 h-4" />
+                  <span>BORROW NOW</span>
                 </button>
               </div>
             </div>
@@ -1389,7 +1446,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                  <span>Hash Rate: {fintechState.mining.hashRate.toFixed(2)} TH/s</span>
+                  <span>
+                    Rate: {effectiveHashRate.toFixed(2)} TH/s ({activeTier.miningRatePercent}% {activeTier.name})
+                  </span>
                   <span>Session Mined: +{fintechState.mining.sessionMinedAethel.toFixed(2)} AETHEL</span>
                 </div>
               </div>

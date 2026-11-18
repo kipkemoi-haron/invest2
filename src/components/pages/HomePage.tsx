@@ -36,8 +36,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       a: 'AETHEL Mining is our simulated distributed proof-of-stake computational network. The AETHEL index is pegged at 0.056 USDT per token. Your mining simulator generates tokens in real time and automatically stops at 24 hours to prevent resource exhaustion until claimed and restarted.',
     },
     {
-      q: 'How do referral tiers increase daily mining caps?',
-      a: 'Every member starts at Tier 0 with a 5.00 USDT daily mining cap. Inviting friends unlocks Bronze (25 USDT), Silver (100 USDT), Gold (250 USDT), and up to Platinum with a maximum 500.00 USDT daily cap, plus up to 18% in peer task commissions.',
+      q: 'How do referral tiers increase mining rates and commissions?',
+      a: 'Starter Tier (0 referrals) mines at the normal 100% rate (5.00 USDT daily cap). Inviting peers unlocks higher mining rates: Bronze (10+ referrals, 150% rate), Silver (100+ referrals, 225% rate), Gold (250+ referrals, 350% rate), and Platinum (500+ referrals, 500% rate). Plus, you earn a direct 1.5% commission on every investment made by your referred customers.',
     },
     {
       q: 'Can I withdraw my task rewards and mining balance?',

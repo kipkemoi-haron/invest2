@@ -6,7 +6,9 @@ import {
   MAX_MINING_SECONDS,
   CYCLE_DURATION_SECONDS,
   AETHEL_PER_SECOND,
+  BASE_HASH_RATE_TH,
   formatMiningTimer,
+  getReferralTierForCount,
   type UserFintechState,
 } from '../../lib/fintechData.ts';
 
@@ -26,6 +28,10 @@ export const MiningPage: React.FC<MiningPageProps> = ({
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   const { isMining, sessionStartedAt, sessionClosed } = fintechState.mining;
+  const currentReferrals = fintechState.referralsCount;
+  const activeTier = getReferralTierForCount(currentReferrals);
+  const effectiveAethelPerSecond = AETHEL_PER_SECOND * activeTier.miningRateMultiplier;
+  const effectiveHashRate = Number((BASE_HASH_RATE_TH * activeTier.miningRateMultiplier).toFixed(2));
 
   // Real-time wall-clock tick every second when mining is active
   useEffect(() => {
@@ -37,7 +43,7 @@ export const MiningPage: React.FC<MiningPageProps> = ({
       const rawElapsed = Math.max(1, Math.floor((current - sessionStartedAt) / 1000));
 
       if (rawElapsed >= CYCLE_DURATION_SECONDS) {
-        const finalSessionMined = MAX_MINING_SECONDS * AETHEL_PER_SECOND;
+        const finalSessionMined = MAX_MINING_SECONDS * effectiveAethelPerSecond;
         onUpdateFintechState((prev) => {
           if (prev.mining.sessionClosed) return prev;
           const base = prev.mining.sessionBaseAethel ?? prev.aethelBalance;
@@ -52,6 +58,8 @@ export const MiningPage: React.FC<MiningPageProps> = ({
               sessionElapsedSeconds: MAX_MINING_SECONDS,
               sessionMinedAethel: finalSessionMined,
               totalMinedAethel: finalTotal,
+              hashRate: effectiveHashRate,
+              dailyCapUSDT: activeTier.dailyMiningCapUSDT,
             },
           };
         });
@@ -59,7 +67,7 @@ export const MiningPage: React.FC<MiningPageProps> = ({
         onUpdateFintechState((prev) => {
           if (!prev.mining.isMining) return prev;
           const base = prev.mining.sessionBaseAethel ?? prev.aethelBalance;
-          const sessionMined = rawElapsed * AETHEL_PER_SECOND;
+          const sessionMined = rawElapsed * effectiveAethelPerSecond;
           const total = base + sessionMined;
           return {
             ...prev,
@@ -69,6 +77,8 @@ export const MiningPage: React.FC<MiningPageProps> = ({
               sessionElapsedSeconds: rawElapsed,
               sessionMinedAethel: sessionMined,
               totalMinedAethel: total,
+              hashRate: effectiveHashRate,
+              dailyCapUSDT: activeTier.dailyMiningCapUSDT,
             },
           };
         });
@@ -78,7 +88,14 @@ export const MiningPage: React.FC<MiningPageProps> = ({
     syncTick();
     const interval = setInterval(syncTick, 1000);
     return () => clearInterval(interval);
-  }, [isMining, sessionStartedAt, onUpdateFintechState]);
+  }, [
+    isMining,
+    sessionStartedAt,
+    effectiveAethelPerSecond,
+    effectiveHashRate,
+    activeTier.dailyMiningCapUSDT,
+    onUpdateFintechState,
+  ]);
 
   const rawElapsed =
     isMining && sessionStartedAt
@@ -108,7 +125,9 @@ export const MiningPage: React.FC<MiningPageProps> = ({
         sessionStartedAt: startedAt,
         sessionElapsedSeconds: 1,
         sessionBaseAethel: prev.aethelBalance,
-        sessionMinedAethel: AETHEL_PER_SECOND,
+        sessionMinedAethel: effectiveAethelPerSecond,
+        hashRate: effectiveHashRate,
+        dailyCapUSDT: activeTier.dailyMiningCapUSDT,
       },
     }));
     setClaimToast(
@@ -122,15 +141,6 @@ export const MiningPage: React.FC<MiningPageProps> = ({
   const cycleProgressPercent = Math.min(100, (displayElapsed / MAX_MINING_SECONDS) * 100);
   const usdtEquivalent = (minedAethel * TOKEN_PRICE_USDT).toFixed(2);
   const sessionUsdtEquivalent = (sessionMined * TOKEN_PRICE_USDT).toFixed(2);
-
-  // Find user's active referral tier
-  const currentReferrals = fintechState.referralsCount;
-  const activeTier =
-    REFERRAL_TIERS.find(
-      (t) =>
-        currentReferrals >= t.minReferrals &&
-        (t.maxReferrals === null || currentReferrals <= t.maxReferrals)
-    ) || REFERRAL_TIERS[0];
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-fade-in text-slate-900 dark:text-slate-100">
@@ -180,7 +190,10 @@ export const MiningPage: React.FC<MiningPageProps> = ({
               </span>
             </div>
             <div className="font-mono text-slate-500 dark:text-slate-400">
-              Hash Rate: <span className="font-bold text-teal-600 dark:text-teal-400">{fintechState.mining.hashRate.toFixed(2)} TH/s</span>
+              Mining Rate:{' '}
+              <span className="font-bold text-teal-600 dark:text-teal-400">
+                {effectiveHashRate.toFixed(2)} TH/s ({activeTier.miningRatePercent}%)
+              </span>
             </div>
           </div>
 
@@ -337,7 +350,7 @@ export const MiningPage: React.FC<MiningPageProps> = ({
                     {activeTier.name} ({fintechState.referralsCount} Referrals)
                   </div>
                   <div className="text-[11px] text-teal-600 dark:text-teal-400">
-                    Active Cap: ${activeTier.dailyMiningCapUSDT} USDT / Day
+                    Active Rate: {activeTier.miningRatePercent}% · Cap: ${activeTier.dailyMiningCapUSDT} USDT / Day
                   </div>
                 </div>
               </div>
@@ -350,7 +363,7 @@ export const MiningPage: React.FC<MiningPageProps> = ({
               </button>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Invite colleagues to boost your daily simulated mining cap up to $500.00 USDT per day.
+              Referrals unlock higher mining speed rates (150% Bronze at 10, 225% Silver at 100, 350% Gold at 250, 500% Platinum at 500) plus 1.5% commission on referee investments.
             </p>
           </div>
         </div>
@@ -381,17 +394,16 @@ export const MiningPage: React.FC<MiningPageProps> = ({
             <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th className="py-3 px-6">Tier Level</th>
-                <th className="py-3 px-6">Referral Range</th>
+                <th className="py-3 px-6">Referral Unlock</th>
+                <th className="py-3 px-6">Mining Rate</th>
                 <th className="py-3 px-6">Daily Mining Cap (USDT)</th>
-                <th className="py-3 px-6">Max Daily AETHEL</th>
-                <th className="py-3 px-6">Task Commission</th>
+                <th className="py-3 px-6">Investment Comm.</th>
                 <th className="py-3 px-6 text-right">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {REFERRAL_TIERS.map((tier) => {
                 const isCurrent = activeTier.level === tier.level;
-                const maxDailyAethel = (tier.dailyMiningCapUSDT / TOKEN_PRICE_USDT).toFixed(0);
 
                 return (
                   <tr
@@ -409,17 +421,17 @@ export const MiningPage: React.FC<MiningPageProps> = ({
                       {tier.maxReferrals === null
                         ? `${tier.minReferrals}+ referrals`
                         : tier.minReferrals === tier.maxReferrals
-                        ? `${tier.minReferrals} referrals`
+                        ? `${tier.minReferrals}–${tier.maxReferrals} (Normal)`
                         : `${tier.minReferrals} – ${tier.maxReferrals} referrals`}
+                    </td>
+                    <td className="py-3.5 px-6 font-mono tabular-nums text-emerald-600 dark:text-emerald-400 font-bold">
+                      {tier.miningRatePercent}% {tier.level === 0 ? '(Normal)' : `(${tier.miningRateMultiplier}x)`}
                     </td>
                     <td className="py-3.5 px-6 font-mono tabular-nums text-teal-600 dark:text-teal-400 font-bold">
                       ${tier.dailyMiningCapUSDT.toFixed(2)} USDT / day
                     </td>
-                    <td className="py-3.5 px-6 font-mono tabular-nums text-slate-600 dark:text-slate-300">
-                      ~{parseInt(maxDailyAethel).toLocaleString()} AETHEL
-                    </td>
                     <td className="py-3.5 px-6 font-mono text-slate-600 dark:text-slate-300">
-                      {(tier.commissionRate * 100).toFixed(0)}%
+                      {(tier.commissionRate * 100).toFixed(1)}%
                     </td>
                     <td className="py-3.5 px-6 text-right">
                       {isCurrent ? (

@@ -220,53 +220,101 @@ export const INITIAL_TASKS: TaskItem[] = [
   },
 ];
 
+export const REFERRAL_INVESTMENT_COMMISSION_RATE = 0.015; // 1.5% of referred customer's investment
+export const BORROW_MONTHLY_INTEREST_RATE = 0.015; // 1.5% monthly borrowing interest
+
 export const REFERRAL_TIERS: ReferralTier[] = [
   {
     level: 0,
     name: 'Starter Tier',
     minReferrals: 0,
     maxReferrals: 0,
-    commissionRate: 0.03, // 3%
-    dailyMiningCapUSDT: 5.00,
-    perks: ['Standard 5 USDT/day mining cap', '3% Task commission', 'Basic support channel'],
+    miningRateMultiplier: 1.0,
+    miningRatePercent: 100,
+    commissionRate: REFERRAL_INVESTMENT_COMMISSION_RATE,
+    dailyMiningCapUSDT: 5.0,
+    perks: [
+      'Normal 100% mining rate (0.045 AETHEL/sec)',
+      'Bronze unlocks after 10 referrals',
+      '1.5% commission on referee investments',
+    ],
   },
   {
     level: 1,
     name: 'Bronze Tier',
-    minReferrals: 1,
-    maxReferrals: 3,
-    commissionRate: 0.05, // 5%
-    dailyMiningCapUSDT: 25.00,
-    perks: ['25 USDT/day mining cap (5x multiplier)', '5% Task commission', 'Instant withdrawal processing priority'],
+    minReferrals: 10,
+    maxReferrals: 99,
+    miningRateMultiplier: 1.5,
+    miningRatePercent: 150,
+    commissionRate: REFERRAL_INVESTMENT_COMMISSION_RATE,
+    dailyMiningCapUSDT: 25.0,
+    perks: [
+      '150% mining rate (+50% speed boost) at 10 referrals',
+      '25 USDT/day mining cap',
+      '1.5% commission on referee investments',
+    ],
   },
   {
     level: 2,
     name: 'Silver Tier',
-    minReferrals: 4,
-    maxReferrals: 10,
-    commissionRate: 0.08, // 8%
-    dailyMiningCapUSDT: 100.00,
-    perks: ['100 USDT/day mining cap (20x multiplier)', '8% Task commission', 'Early access to high-reward surveys'],
+    minReferrals: 100,
+    maxReferrals: 249,
+    miningRateMultiplier: 2.25,
+    miningRatePercent: 225,
+    commissionRate: REFERRAL_INVESTMENT_COMMISSION_RATE,
+    dailyMiningCapUSDT: 100.0,
+    perks: [
+      '225% mining rate (+125% speed boost) at 100 referrals',
+      '100 USDT/day mining cap',
+      '1.5% commission on referee investments',
+    ],
   },
   {
     level: 3,
     name: 'Gold Tier',
-    minReferrals: 11,
-    maxReferrals: 25,
-    commissionRate: 0.12, // 12%
-    dailyMiningCapUSDT: 250.00,
-    perks: ['250 USDT/day mining cap (50x multiplier)', '12% Task commission', 'Dedicated compliance manager'],
+    minReferrals: 250,
+    maxReferrals: 499,
+    miningRateMultiplier: 3.5,
+    miningRatePercent: 350,
+    commissionRate: REFERRAL_INVESTMENT_COMMISSION_RATE,
+    dailyMiningCapUSDT: 250.0,
+    perks: [
+      '350% mining rate (+250% speed boost) at 250 referrals',
+      '250 USDT/day mining cap',
+      '1.5% commission on referee investments',
+    ],
   },
   {
     level: 4,
     name: 'Platinum Tier',
-    minReferrals: 26,
+    minReferrals: 500,
     maxReferrals: null,
-    commissionRate: 0.18, // 18%
-    dailyMiningCapUSDT: 500.00,
-    perks: ['Maximum 500 USDT/day mining cap', '18% Task commission', 'Institutional OTC liquidity & zero fees'],
+    miningRateMultiplier: 5.0,
+    miningRatePercent: 500,
+    commissionRate: REFERRAL_INVESTMENT_COMMISSION_RATE,
+    dailyMiningCapUSDT: 500.0,
+    perks: [
+      '500% mining rate (+400% speed boost) at 500 referrals',
+      'Maximum 500 USDT/day mining cap',
+      '1.5% commission on referee investments',
+    ],
   },
 ];
+
+export function getReferralTierForCount(referralsCount: number): ReferralTier {
+  const count = Math.max(0, Math.floor(referralsCount) || 0);
+  if (count >= 500) return REFERRAL_TIERS[4];
+  if (count >= 250) return REFERRAL_TIERS[3];
+  if (count >= 100) return REFERRAL_TIERS[2];
+  if (count >= 10) return REFERRAL_TIERS[1];
+  return REFERRAL_TIERS[0];
+}
+
+export function getNextReferralTier(referralsCount: number): ReferralTier | null {
+  const current = getReferralTierForCount(referralsCount);
+  const nextIndex = REFERRAL_TIERS.findIndex((t) => t.level === current.level) + 1;
+  return nextIndex < REFERRAL_TIERS.length ? REFERRAL_TIERS[nextIndex] : null;
+}
 
 export const INITIAL_INVITED_FRIENDS: InvitedFriend[] = [
   {
@@ -274,9 +322,10 @@ export const INITIAL_INVITED_FRIENDS: InvitedFriend[] = [
     name: 'Elena Rostova',
     maskedEmail: 'e.ro***@zurich.ch',
     joinedDate: '2026-10-14',
+    investedAmountUSDT: 5000.0,
     tasksCompleted: 42,
     miningActive: true,
-    commissionEarnedUSDT: 86.40,
+    commissionEarnedUSDT: 75.0, // 1.5% of $5,000
     tier: 'Gold',
   },
   {
@@ -284,9 +333,10 @@ export const INITIAL_INVITED_FRIENDS: InvitedFriend[] = [
     name: 'Liam Chen',
     maskedEmail: 'l.ch***@singapore.sg',
     joinedDate: '2026-10-18',
+    investedAmountUSDT: 3200.0,
     tasksCompleted: 29,
     miningActive: true,
-    commissionEarnedUSDT: 58.20,
+    commissionEarnedUSDT: 48.0, // 1.5% of $3,200
     tier: 'Silver',
   },
   {
@@ -294,9 +344,10 @@ export const INITIAL_INVITED_FRIENDS: InvitedFriend[] = [
     name: 'Tariq Al-Mansoor',
     maskedEmail: 't.al***@dubai.ae',
     joinedDate: '2026-10-22',
+    investedAmountUSDT: 8000.0,
     tasksCompleted: 51,
     miningActive: true,
-    commissionEarnedUSDT: 114.75,
+    commissionEarnedUSDT: 120.0, // 1.5% of $8,000
     tier: 'Gold',
   },
   {
@@ -304,9 +355,10 @@ export const INITIAL_INVITED_FRIENDS: InvitedFriend[] = [
     name: 'Chloe Dubois',
     maskedEmail: 'c.du***@paris.fr',
     joinedDate: '2026-10-27',
+    investedAmountUSDT: 2000.0,
     tasksCompleted: 17,
     miningActive: false,
-    commissionEarnedUSDT: 32.10,
+    commissionEarnedUSDT: 30.0, // 1.5% of $2,000
     tier: 'Bronze',
   },
   {
@@ -314,9 +366,10 @@ export const INITIAL_INVITED_FRIENDS: InvitedFriend[] = [
     name: 'Kevin Patel',
     maskedEmail: 'k.pa***@london.uk',
     joinedDate: '2026-11-01',
+    investedAmountUSDT: 1500.0,
     tasksCompleted: 12,
     miningActive: true,
-    commissionEarnedUSDT: 24.50,
+    commissionEarnedUSDT: 22.5, // 1.5% of $1,500
     tier: 'Bronze',
   },
   {
@@ -324,9 +377,10 @@ export const INITIAL_INVITED_FRIENDS: InvitedFriend[] = [
     name: 'Hannah Lindqvist',
     maskedEmail: 'h.li***@stockholm.se',
     joinedDate: '2026-11-04',
+    investedAmountUSDT: 1000.0,
     tasksCompleted: 8,
     miningActive: true,
-    commissionEarnedUSDT: 16.85,
+    commissionEarnedUSDT: 15.0, // 1.5% of $1,000
     tier: 'Bronze',
   },
   {
@@ -334,9 +388,10 @@ export const INITIAL_INVITED_FRIENDS: InvitedFriend[] = [
     name: 'Mateo Morales',
     maskedEmail: 'm.mo***@madrid.es',
     joinedDate: '2026-11-06',
+    investedAmountUSDT: 600.0,
     tasksCompleted: 5,
     miningActive: false,
-    commissionEarnedUSDT: 10.00,
+    commissionEarnedUSDT: 9.0, // 1.5% of $600
     tier: 'Bronze',
   },
 ];
@@ -345,6 +400,7 @@ export const TOKEN_PRICE_USDT = 0.056; // 0.056 USDT per AETHEL
 export const MAX_MINING_SECONDS = 86399; // 23:59:59
 export const CYCLE_DURATION_SECONDS = 86400; // 24 Hours -> closes after 23:59:59
 export const AETHEL_PER_SECOND = 0.045;
+export const BASE_HASH_RATE_TH = 1.45;
 export const INVESTMENT_24H_RATE = 0.02; // 2.0% increase every 24 hours
 export const CYCLE_24H_MS = 24 * 60 * 60 * 1000;
 
@@ -517,8 +573,8 @@ export const getDefaultFintechState = (): UserFintechState => ({
     sessionBaseAethel: 4820.00,
     totalMinedAethel: 4820.00,
     sessionMinedAethel: 0,
-    hashRate: 1.45,
+    hashRate: 2.18, // 1.5x Bronze Tier for 14 referrals
     tokenPriceUSDT: TOKEN_PRICE_USDT,
-    dailyCapUSDT: 250.00, // Gold Tier for 14 referrals
+    dailyCapUSDT: 25.00, // Bronze Tier for 14 referrals
   },
 });

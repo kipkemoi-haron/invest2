@@ -167,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
                 <Users className="w-4 h-4 text-teal-500" />
                 <span>Referrals</span>
               </span>
-              <span className="text-[10px] font-mono text-teal-600 font-bold">18% Comm.</span>
+              <span className="text-[10px] font-mono text-teal-600 font-bold">1.5% Inv. Comm.</span>
             </button>
 
             {user && (
