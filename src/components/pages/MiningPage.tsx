@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, RotateCcw, Users, CheckCircle2, ArrowRight, Clock, Lock } from 'lucide-react';
+import { Play, RotateCcw, Users, CheckCircle2, ArrowRight, ArrowUpRight, Clock, Lock } from 'lucide-react';
 import {
   REFERRAL_TIERS,
   TOKEN_PRICE_USDT,
@@ -22,6 +22,7 @@ export const MiningPage: React.FC<MiningPageProps> = ({
   onNavigate,
 }) => {
   const [claimToast, setClaimToast] = useState<string | null>(null);
+  const [withdrawNotice, setWithdrawNotice] = useState<boolean>(false);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   const { isMining, sessionStartedAt, sessionClosed } = fintechState.mining;
@@ -147,16 +148,6 @@ export const MiningPage: React.FC<MiningPageProps> = ({
             AETHEL Mining
           </h1>
         </div>
-
-        {/* Awaiting KYC Banner */}
-        <div className="w-full md:w-auto px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/70 flex items-center gap-3 shrink-0 shadow-sm">
-          <div className="p-2 rounded-xl bg-amber-500 text-white shrink-0">
-            <Lock className="w-4 h-4" />
-          </div>
-          <div className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
-            Awaiting KYC
-          </div>
-        </div>
       </div>
 
       {claimToast && (
@@ -220,9 +211,8 @@ export const MiningPage: React.FC<MiningPageProps> = ({
 
               {/* Centered Inner Balance & Status */}
               <div className="absolute inset-7 rounded-full bg-slate-50/90 dark:bg-slate-950/85 border border-slate-100 dark:border-slate-800/80 flex flex-col items-center justify-center px-3 text-center">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
-                  <span>Awaiting KYC</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400 mb-1">
+                  Mining Balance
                 </span>
                 <div className="text-xl sm:text-2xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white tracking-tight leading-none max-w-full truncate">
                   {minedAethel.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -282,25 +272,36 @@ export const MiningPage: React.FC<MiningPageProps> = ({
           <div className="p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Mined AETHEL Holdings
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
-                <Lock className="w-3 h-3" />
-                <span>Awaiting KYC</span>
+                Mining Balance
               </span>
             </div>
 
             {/* Total Balance */}
             <div className="space-y-1">
-              <div className="text-xs text-slate-400">Mined Balance (Awaiting KYC):</div>
               <div className="text-2xl sm:text-4xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white tracking-tight break-words">
                 {minedAethel.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 <span className="text-sm font-semibold text-teal-600 dark:text-teal-400 ml-2">AETHEL</span>
               </div>
-              <div className="text-sm font-mono text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1.5 pt-0.5">
-                <Lock className="w-4 h-4 shrink-0" />
-                <span>≈ ${usdtEquivalent} USDT (Awaiting KYC)</span>
+              <div className="text-sm font-mono text-emerald-600 dark:text-emerald-400 font-semibold pt-0.5">
+                ≈ ${usdtEquivalent} USDT
               </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={() => setWithdrawNotice(true)}
+                className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <ArrowUpRight className="w-4 h-4" />
+                <span>Withdraw to Balance</span>
+              </button>
+              {withdrawNotice && (
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-2">
+                  <Lock className="w-4 h-4 shrink-0" />
+                  <span>Awaiting KYC (coming soon)</span>
+                </div>
+              )}
             </div>
 
             {/* Current Session Yield */}
@@ -317,16 +318,10 @@ export const MiningPage: React.FC<MiningPageProps> = ({
                   +${sessionUsdtEquivalent} USDT
                 </span>
               </div>
-              <div className="flex flex-wrap justify-between gap-1 text-slate-500 dark:text-slate-400">
-                <span>Status:</span>
-                <span className="font-bold text-amber-600 dark:text-amber-400">
-                  Awaiting KYC
-                </span>
-              </div>
             </div>
 
             <div className="text-[11px] text-slate-400">
-              *Mined AETHEL balances are Awaiting KYC. Sessions run 24 hours from 00:00:01 to 23:59:59 before closing.
+              *Sessions run 24 hours from 00:00:01 to 23:59:59 before closing.
             </div>
           </div>
 
