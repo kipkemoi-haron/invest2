@@ -9,6 +9,7 @@ interface PWAContextType {
   isInstallable: boolean;
   isInstalled: boolean;
   isIOS: boolean;
+  isIOSSafari: boolean;
   isOnline: boolean;
   showInstallModal: boolean;
   isBannerDismissed: boolean;
@@ -29,10 +30,27 @@ function detectStandalone(): boolean {
   );
 }
 
+function detectIOSDevice(): boolean {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent.toLowerCase();
+  const hasTouch =
+    (typeof document !== 'undefined' && 'ontouchend' in document) ||
+    navigator.maxTouchPoints > 1;
+  return /iphone|ipad|ipod/.test(ua) || (ua.includes('mac') && hasTouch);
+}
+
+function detectIOSSafari(): boolean {
+  if (!detectIOSDevice() || typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent.toLowerCase();
+  const isOtherIOSBrowser = /(crios|fxios|edgios|opios|duckduckgo|gsa|fbav|fban|instagram|line)/.test(ua);
+  return /safari/.test(ua) && !isOtherIOSBrowser;
+}
+
 export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState<boolean>(() => detectStandalone());
-  const [isIOS, setIsIOS] = useState<boolean>(false);
+  const [isIOS, setIsIOS] = useState<boolean>(() => detectIOSDevice());
+  const [isIOSSafari, setIsIOSSafari] = useState<boolean>(() => detectIOSSafari());
   const [isOnline, setIsOnline] = useState<boolean>(() =>
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
@@ -41,12 +59,8 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     setIsInstalled(detectStandalone());
-
-    const ua = window.navigator.userAgent.toLowerCase();
-    const isIOSDevice =
-      /iphone|ipad|ipod/.test(ua) ||
-      (ua.includes('mac') && 'ontouchend' in document);
-    setIsIOS(isIOSDevice);
+    setIsIOS(detectIOSDevice());
+    setIsIOSSafari(detectIOSSafari());
 
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const handleDisplayChange = (e: MediaQueryListEvent) => {
@@ -87,6 +101,11 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const closeInstallModal = useCallback(() => setShowInstallModal(false), []);
 
   const triggerInstall = useCallback(async () => {
+    if (isIOS) {
+      setShowInstallModal(true);
+      return;
+    }
+
     if (deferredPrompt) {
       try {
         await deferredPrompt.prompt();
@@ -102,7 +121,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
     setShowInstallModal(true);
-  }, [deferredPrompt]);
+  }, [deferredPrompt, isIOS]);
 
   return (
     <PWAContext.Provider
@@ -110,6 +129,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isInstallable: Boolean(deferredPrompt),
         isInstalled,
         isIOS,
+        isIOSSafari,
         isOnline,
         showInstallModal,
         isBannerDismissed,
