@@ -9,7 +9,6 @@ import {
   Menu,
   X,
   LogOut,
-  TrendingUp,
   ShieldCheck,
   Download,
   Smartphone,
@@ -112,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
             <button
               onClick={() => handleLinkClick('wallet')}
               className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
-                currentView === 'wallet'
+                currentView === 'wallet' || currentView === 'invest'
                   ? 'bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400'
                   : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
@@ -121,24 +120,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
                 <Wallet className="w-4 h-4 text-teal-500" />
                 <span>Wallet</span>
               </span>
-              <span className="text-[10px] font-mono text-slate-400">Deposit · Withdraw</span>
-            </button>
-
-            <button
-              onClick={() => handleLinkClick('invest')}
-              className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
-                currentView === 'invest'
-                  ? 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400'
-                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-blue-500" />
-                <span>My Investments</span>
-              </span>
-              <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-bold">
-                2.0%/wk
-              </span>
+              <span className="text-[10px] font-mono text-slate-400">Balance · My Investments</span>
             </button>
 
             <button

@@ -345,6 +345,17 @@ export const TOKEN_PRICE_USDT = 0.056; // 0.056 USDT per AETHEL
 export const MAX_MINING_SECONDS = 86399; // 23:59:59
 export const CYCLE_DURATION_SECONDS = 86400; // 24 Hours -> closes after 23:59:59
 export const AETHEL_PER_SECOND = 0.045;
+export const INVESTMENT_24H_RATE = 0.02; // 2.0% increase every 24 hours
+export const CYCLE_24H_MS = 24 * 60 * 60 * 1000;
+
+export interface InvestmentAccrualRecord {
+  id: string;
+  cycleNumber: number;
+  timestamp: number;
+  principalBaseUSDT: number;
+  increaseAmountUSDT: number;
+  totalInvestedAfterUSDT: number;
+}
 
 export interface UpcomingTaskCategory {
   id: string;
@@ -407,6 +418,14 @@ export function formatMiningTimer(totalSeconds: number): string {
   return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
+export function formatCountdownTimer(remainingMs: number): string {
+  const clampedSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+  const hrs = Math.floor(clampedSeconds / 3600);
+  const mins = Math.floor((clampedSeconds % 3600) / 60);
+  const secs = clampedSeconds % 60;
+  return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
 export function computeLockedTaskBalanceUSDT(
   completedTaskIds: string[],
   storedLockedBalance?: number
@@ -424,6 +443,11 @@ export function computeLockedTaskBalanceUSDT(
 export interface UserFintechState {
   sampleBalanceUSDT: number;
   investedBalanceUSDT: number;
+  investmentStartedAt?: number | null;
+  investmentLastAccrualAt?: number | null;
+  investmentAccruedUSDT?: number;
+  investmentCycleCount?: number;
+  investmentHistory?: InvestmentAccrualRecord[];
   taskLockedBalanceUSDT: number;
   aethelBalance: number;
   tasksCompletedCount: number;
@@ -448,6 +472,7 @@ export const getStoredFintechState = (): UserFintechState => {
       return {
         ...defaults,
         ...parsed,
+        investmentHistory: Array.isArray(parsed.investmentHistory) ? parsed.investmentHistory : [],
         mining: {
           ...defaults.mining,
           ...(parsed.mining || {}),
@@ -472,6 +497,11 @@ export const saveFintechState = (state: UserFintechState) => {
 export const getDefaultFintechState = (): UserFintechState => ({
   sampleBalanceUSDT: 1248.50,
   investedBalanceUSDT: 15000.00,
+  investmentStartedAt: null,
+  investmentLastAccrualAt: null,
+  investmentAccruedUSDT: 0,
+  investmentCycleCount: 0,
+  investmentHistory: [],
   taskLockedBalanceUSDT: 13.50,
   aethelBalance: 4820.00,
   tasksCompletedCount: 3,

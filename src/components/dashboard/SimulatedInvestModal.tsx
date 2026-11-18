@@ -259,7 +259,7 @@ export const SimulatedInvestModal: React.FC<SimulatedInvestModalProps> = ({
                 onClick={handleResetAndClose}
                 className="w-full min-h-[44px] max-w-md py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-600/25 cursor-pointer"
               >
-                Return to Dashboard
+                Return to Wallet
               </button>
             </div>
           )}
