@@ -342,10 +342,89 @@ export const INITIAL_INVITED_FRIENDS: InvitedFriend[] = [
 ];
 
 export const TOKEN_PRICE_USDT = 0.056; // 0.056 USDT per AETHEL
+export const MAX_MINING_SECONDS = 86399; // 23:59:59
+export const CYCLE_DURATION_SECONDS = 86400; // 24 Hours -> closes after 23:59:59
+export const AETHEL_PER_SECOND = 0.045;
+
+export interface UpcomingTaskCategory {
+  id: string;
+  title: string;
+  description: string;
+  estimatedReward: string;
+  status: 'Coming Soon';
+}
+
+export const UPCOMING_TASK_CATEGORIES: UpcomingTaskCategory[] = [
+  {
+    id: 'upcoming-watch-ads',
+    title: 'Watch Ads',
+    description: 'View verified partner brand video spots and sponsor campaigns for instant micro-rewards.',
+    estimatedReward: '$0.50 – $2.00 USDT / ad',
+    status: 'Coming Soon',
+  },
+  {
+    id: 'upcoming-freelancing',
+    title: 'Freelancing',
+    description: 'Take on curated remote micro-contracts in QA testing, content moderation, and research.',
+    estimatedReward: '$15.00 – $75.00 USDT / gig',
+    status: 'Coming Soon',
+  },
+  {
+    id: 'upcoming-youtube',
+    title: 'YouTube Videos',
+    description: 'Watch, evaluate, and submit retention & quality feedback on partner YouTube creator videos.',
+    estimatedReward: '$1.50 – $5.00 USDT / video',
+    status: 'Coming Soon',
+  },
+  {
+    id: 'upcoming-tiktok',
+    title: 'TikTok Reviews',
+    description: 'Audit short-form creator clips, hashtag accuracy, and campaign brand compliance on TikTok.',
+    estimatedReward: '$1.25 – $4.00 USDT / review',
+    status: 'Coming Soon',
+  },
+  {
+    id: 'upcoming-facebook',
+    title: 'Facebook Reviews',
+    description: 'Verify local business pages, marketplace listings, and sponsored community posts on Facebook.',
+    estimatedReward: '$1.50 – $4.50 USDT / review',
+    status: 'Coming Soon',
+  },
+  {
+    id: 'upcoming-instagram',
+    title: 'Instagram Reviews',
+    description: 'Score sponsored Reels, story placements, and brand engagement campaigns on Instagram.',
+    estimatedReward: '$1.50 – $5.00 USDT / review',
+    status: 'Coming Soon',
+  },
+];
+
+export function formatMiningTimer(totalSeconds: number): string {
+  const clamped = Math.max(0, Math.min(MAX_MINING_SECONDS, Math.floor(totalSeconds)));
+  const hrs = Math.floor(clamped / 3600);
+  const mins = Math.floor((clamped % 3600) / 60);
+  const secs = clamped % 60;
+  return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+export function computeLockedTaskBalanceUSDT(
+  completedTaskIds: string[],
+  storedLockedBalance?: number
+): number {
+  const fromIds = INITIAL_TASKS.filter((t) => completedTaskIds.includes(t.id)).reduce(
+    (sum, t) => sum + t.rewardUSDT,
+    0
+  );
+  if (typeof storedLockedBalance === 'number' && Number.isFinite(storedLockedBalance)) {
+    return Math.max(fromIds, storedLockedBalance);
+  }
+  return fromIds;
+}
 
 export interface UserFintechState {
   sampleBalanceUSDT: number;
   investedBalanceUSDT: number;
+  taskLockedBalanceUSDT: number;
   aethelBalance: number;
   tasksCompletedCount: number;
   referralsCount: number;
@@ -365,9 +444,14 @@ export const getStoredFintechState = (): UserFintechState => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      const defaults = getDefaultFintechState();
       return {
-        ...getDefaultFintechState(),
+        ...defaults,
         ...parsed,
+        mining: {
+          ...defaults.mining,
+          ...(parsed.mining || {}),
+        },
       };
     }
   } catch (e) {
@@ -388,18 +472,21 @@ export const saveFintechState = (state: UserFintechState) => {
 export const getDefaultFintechState = (): UserFintechState => ({
   sampleBalanceUSDT: 1248.50,
   investedBalanceUSDT: 15000.00,
+  taskLockedBalanceUSDT: 13.50,
   aethelBalance: 4820.00,
-  tasksCompletedCount: 38,
+  tasksCompletedCount: 3,
   referralsCount: 14,
-  completedTaskIds: [],
+  completedTaskIds: ['task-app-01', 'task-hotel-01', 'task-checkin-01'],
   dailyStreak: 6,
   lastCheckInDate: null,
   mining: {
-    isMining: true,
-    sessionStartedAt: Date.now() - 14 * 3600 * 1000 - 22 * 60 * 1000, // 14h 22m ago
-    sessionElapsedSeconds: 51720, // ~14.3 hours
+    isMining: false,
+    sessionStartedAt: null,
+    sessionElapsedSeconds: 0,
+    sessionClosed: false,
+    sessionBaseAethel: 4820.00,
     totalMinedAethel: 4820.00,
-    sessionMinedAethel: 642.50,
+    sessionMinedAethel: 0,
     hashRate: 1.45,
     tokenPriceUSDT: TOKEN_PRICE_USDT,
     dailyCapUSDT: 250.00, // Gold Tier for 14 referrals

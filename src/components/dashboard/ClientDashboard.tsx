@@ -7,6 +7,7 @@ import {
   TrendingUp,
   ArrowRight,
   ArrowDownLeft,
+  ArrowUpRight,
   Search,
   Clock,
   CheckCircle2,
@@ -16,11 +17,28 @@ import {
   Briefcase,
   CalendarCheck,
   Wallet,
+  Lock,
+  Play,
+  RotateCcw,
+  X,
+  ChevronRight,
+  Tv,
+  Laptop,
+  Youtube,
+  Video,
+  ThumbsUp,
+  Instagram,
 } from 'lucide-react';
 import {
   INITIAL_TASKS,
+  UPCOMING_TASK_CATEGORIES,
   REFERRAL_TIERS,
   TOKEN_PRICE_USDT,
+  MAX_MINING_SECONDS,
+  CYCLE_DURATION_SECONDS,
+  AETHEL_PER_SECOND,
+  formatMiningTimer,
+  computeLockedTaskBalanceUSDT,
   type UserFintechState,
 } from '../../lib/fintechData.ts';
 import { api } from '../../lib/api.ts';
@@ -38,9 +56,8 @@ interface ClientDashboardProps {
   cloudLoaded: boolean;
 }
 
-const MAX_CYCLE_SECONDS = 86400; // 24 Hours
-
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({
+  onNavigate,
   initialTab = 'dashboard',
   fintechState,
   onUpdateFintechState,
@@ -55,66 +72,137 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Modals
+  // Dashboard Clickable Card Modals
+  const [balanceModalOpen, setBalanceModalOpen] = useState<boolean>(false);
+  const [tasksOverviewModalOpen, setTasksOverviewModalOpen] = useState<boolean>(false);
+  const [tasksOverviewTab, setTasksOverviewTab] = useState<'completed' | 'pending' | 'upcoming'>('completed');
+  const [miningModalOpen, setMiningModalOpen] = useState<boolean>(false);
+
+  // Action Modals
   const [activeTaskModal, setActiveTaskModal] = useState<TaskItem | null>(null);
   const [investModalOpen, setInvestModalOpen] = useState<boolean>(false);
   const [depositModalOpen, setDepositModalOpen] = useState<boolean>(false);
   const [withdrawModalOpen, setWithdrawModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Wall-clock tick for real-time 00:00:01 -> 23:59:59 mining counter
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
   useEffect(() => {
     setActiveNav(initialTab);
   }, [initialTab]);
 
-  // Keep live mining timer and AETHEL balance ticking on the dashboard
+  // Real-time wall-clock mining counter (00:00:01 -> 23:59:59, then closes after 24h)
+  const { isMining, sessionStartedAt, sessionClosed } = fintechState.mining;
+
   useEffect(() => {
-    if (!fintechState.mining.isMining) return;
-    if (fintechState.mining.sessionElapsedSeconds >= MAX_CYCLE_SECONDS) return;
+    if (!isMining || !sessionStartedAt) return;
 
-    const interval = setInterval(() => {
-      onUpdateFintechState((prev) => {
-        if (!prev.mining.isMining || prev.mining.sessionElapsedSeconds >= MAX_CYCLE_SECONDS) {
-          return prev;
-        }
-        const nextElapsed = Math.min(prev.mining.sessionElapsedSeconds + 1, MAX_CYCLE_SECONDS);
-        const increment = 0.045;
-        const nextAethel = prev.aethelBalance + increment;
-        return {
-          ...prev,
-          aethelBalance: nextAethel,
-          mining: {
-            ...prev.mining,
-            sessionElapsedSeconds: nextElapsed,
-            sessionMinedAethel: prev.mining.sessionMinedAethel + increment,
-            totalMinedAethel: nextAethel,
-            isMining: nextElapsed < MAX_CYCLE_SECONDS,
-          },
-        };
-      });
-    }, 1000);
+    const syncTick = () => {
+      const current = Date.now();
+      setNowMs(current);
+      const rawElapsed = Math.max(1, Math.floor((current - sessionStartedAt) / 1000));
 
+      if (rawElapsed >= CYCLE_DURATION_SECONDS) {
+        const finalSessionMined = MAX_MINING_SECONDS * AETHEL_PER_SECOND;
+        onUpdateFintechState((prev) => {
+          if (prev.mining.sessionClosed) return prev;
+          const base = prev.mining.sessionBaseAethel ?? prev.aethelBalance;
+          const finalTotal = base + finalSessionMined;
+          const nextState: UserFintechState = {
+            ...prev,
+            aethelBalance: finalTotal,
+            mining: {
+              ...prev.mining,
+              isMining: false,
+              sessionClosed: true,
+              sessionElapsedSeconds: MAX_MINING_SECONDS,
+              sessionMinedAethel: finalSessionMined,
+              totalMinedAethel: finalTotal,
+            },
+          };
+          if (user && cloudLoaded) {
+            api.saveUserFintechStateToCloud(nextState).catch(console.error);
+          }
+          return nextState;
+        });
+      } else {
+        onUpdateFintechState((prev) => {
+          if (!prev.mining.isMining) return prev;
+          const base = prev.mining.sessionBaseAethel ?? prev.aethelBalance;
+          const sessionMined = rawElapsed * AETHEL_PER_SECOND;
+          const total = base + sessionMined;
+          return {
+            ...prev,
+            aethelBalance: total,
+            mining: {
+              ...prev.mining,
+              sessionElapsedSeconds: rawElapsed,
+              sessionMinedAethel: sessionMined,
+              totalMinedAethel: total,
+            },
+          };
+        });
+      }
+    };
+
+    syncTick();
+    const interval = setInterval(syncTick, 1000);
     return () => clearInterval(interval);
-  }, [fintechState.mining.isMining, fintechState.mining.sessionElapsedSeconds >= MAX_CYCLE_SECONDS, onUpdateFintechState]);
+  }, [isMining, sessionStartedAt, user, cloudLoaded, onUpdateFintechState]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Task Completion handler
+  // Start or Restart 24-Hour Mining Session (00:00:01 -> 23:59:59)
+  const handleStartOrRestartMining = () => {
+    const startedAt = Date.now() - 1000; // Immediately starts at 00:00:01
+    setNowMs(Date.now());
+    const wasClosed = isCycleClosed;
+    onUpdateFintechState((prev) => {
+      const nextState: UserFintechState = {
+        ...prev,
+        mining: {
+          ...prev.mining,
+          isMining: true,
+          sessionClosed: false,
+          sessionStartedAt: startedAt,
+          sessionElapsedSeconds: 1,
+          sessionBaseAethel: prev.aethelBalance,
+          sessionMinedAethel: AETHEL_PER_SECOND,
+        },
+      };
+      if (user && cloudLoaded) {
+        api.saveUserFintechStateToCloud(nextState).catch(console.error);
+      }
+      return nextState;
+    });
+    showToast(
+      wasClosed
+        ? '24-Hour mining restarted at 00:00:01. Balance remains locked awaiting KYC.'
+        : 'Mining started at 00:00:01! Session closes automatically after 23:59:59.'
+    );
+  };
+
+  // Task Completion handler (credits Locked Task Funds awaiting KYC, NOT deposited/invested Balance)
   const handleTaskComplete = (taskId: string, rewardUSDT: number, rewardAethel: number) => {
     onUpdateFintechState((prev) => {
-      const nextTasksCount = prev.tasksCompletedCount + 1;
-      const nextSampleBalance = prev.sampleBalanceUSDT + rewardUSDT;
-      const nextAethelBalance = prev.aethelBalance + rewardAethel;
-      const nextCompletedIds = prev.completedTaskIds.includes(taskId)
+      const alreadyDone = prev.completedTaskIds.includes(taskId);
+      const nextTasksCount = alreadyDone ? prev.tasksCompletedCount : prev.tasksCompletedCount + 1;
+      const nextLockedTaskBalance = alreadyDone
+        ? computeLockedTaskBalanceUSDT(prev.completedTaskIds, prev.taskLockedBalanceUSDT)
+        : computeLockedTaskBalanceUSDT(prev.completedTaskIds, prev.taskLockedBalanceUSDT) + rewardUSDT;
+      const nextAethelBalance = alreadyDone ? prev.aethelBalance : prev.aethelBalance + rewardAethel;
+      const nextCompletedIds = alreadyDone
         ? prev.completedTaskIds
         : [...prev.completedTaskIds, taskId];
 
       const nextState: UserFintechState = {
         ...prev,
         tasksCompletedCount: nextTasksCount,
-        sampleBalanceUSDT: nextSampleBalance,
+        taskLockedBalanceUSDT: nextLockedTaskBalance,
         aethelBalance: nextAethelBalance,
         completedTaskIds: nextCompletedIds,
       };
@@ -124,10 +212,12 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
       return nextState;
     });
 
-    showToast(`Task verified! +$${rewardUSDT.toFixed(2)} USDT & +${rewardAethel} AETHEL credited.`);
+    showToast(
+      `Task verified! +$${rewardUSDT.toFixed(2)} USDT added to Locked Funds (awaiting KYC).`
+    );
   };
 
-  // Investment Success Handler
+  // Investment Success Handler — increases invested balance (and total balance reflects deposited + invested)
   const handleInvestSuccess = (amountUSD: number, termWeeks: number = 12) => {
     onUpdateFintechState((prev) => {
       const nextState: UserFintechState = {
@@ -141,7 +231,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
       return nextState;
     });
 
-    showToast(`$${amountUSD.toLocaleString()} USD invested in ${termWeeks}-Week Term! Accruing 2.0% weekly yield.`);
+    showToast(
+      `$${amountUSD.toLocaleString()} USD invested in ${termWeeks}-Week Term! Accruing 2.0% weekly yield.`
+    );
   };
 
   const categories: (string | TaskCategory)[] = [
@@ -177,15 +269,56 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     }
   };
 
-  const remainingActiveTasks = Math.max(0, INITIAL_TASKS.length - fintechState.completedTaskIds.length);
-  const elapsedSeconds = fintechState.mining.sessionElapsedSeconds;
-  const isCycleExpired = elapsedSeconds >= MAX_CYCLE_SECONDS;
-  const isMiningActive = fintechState.mining.isMining && !isCycleExpired;
-  const remainingSeconds = Math.max(0, MAX_CYCLE_SECONDS - elapsedSeconds);
-  const hoursLeft = Math.floor(remainingSeconds / 3600);
-  const minutesLeft = Math.floor((remainingSeconds % 3600) / 60);
-  const secondsLeft = remainingSeconds % 60;
-  const cycleCountdown = `${String(hoursLeft).padStart(2, '0')}:${String(minutesLeft).padStart(2, '0')}:${String(secondsLeft).padStart(2, '0')}`;
+  const getUpcomingIcon = (id: string) => {
+    switch (id) {
+      case 'upcoming-watch-ads':
+        return <Tv className="w-4 h-4 text-amber-500" />;
+      case 'upcoming-freelancing':
+        return <Laptop className="w-4 h-4 text-amber-500" />;
+      case 'upcoming-youtube':
+        return <Youtube className="w-4 h-4 text-amber-500" />;
+      case 'upcoming-tiktok':
+        return <Video className="w-4 h-4 text-amber-500" />;
+      case 'upcoming-facebook':
+        return <ThumbsUp className="w-4 h-4 text-amber-500" />;
+      case 'upcoming-instagram':
+        return <Instagram className="w-4 h-4 text-amber-500" />;
+      default:
+        return <Clock className="w-4 h-4 text-amber-500" />;
+    }
+  };
+
+  // Financial & Task Computations
+  const depositedBalanceUSDT = fintechState.sampleBalanceUSDT;
+  const investedBalanceUSDT = fintechState.investedBalanceUSDT;
+  const totalBalanceUSDT = depositedBalanceUSDT + investedBalanceUSDT;
+
+  const completedTasksList = INITIAL_TASKS.filter((t) =>
+    fintechState.completedTaskIds.includes(t.id)
+  );
+  const pendingTasksList = INITIAL_TASKS.filter(
+    (t) => !fintechState.completedTaskIds.includes(t.id)
+  );
+  const lockedTaskBalanceUSDT = computeLockedTaskBalanceUSDT(
+    fintechState.completedTaskIds,
+    fintechState.taskLockedBalanceUSDT
+  );
+
+  // Real-time mining timer computations (00:00:01 -> 23:59:59)
+  const rawElapsed =
+    isMining && sessionStartedAt
+      ? Math.max(1, Math.floor((nowMs - sessionStartedAt) / 1000))
+      : fintechState.mining.sessionElapsedSeconds;
+
+  const isCycleClosed = Boolean(sessionClosed) || rawElapsed >= CYCLE_DURATION_SECONDS;
+  const isMiningActive = isMining && !isCycleClosed;
+  const displayElapsed = isCycleClosed
+    ? MAX_MINING_SECONDS
+    : isMiningActive
+    ? Math.min(MAX_MINING_SECONDS, Math.max(1, rawElapsed))
+    : 0;
+  const miningTimerDisplay = formatMiningTimer(displayElapsed);
+  const miningProgressPercent = Math.min(100, (displayElapsed / MAX_MINING_SECONDS) * 100);
 
   const activeTier =
     REFERRAL_TIERS.find(
@@ -219,45 +352,93 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
           </div>
         )}
 
-        {/* 1. STREAMLINED HOMEPAGE DASHBOARD (Exact 4 Cards Top-to-Bottom) */}
+        {/* 1. STREAMLINED HOMEPAGE DASHBOARD */}
         {activeNav === 'dashboard' && (
           <div className="max-w-3xl mx-auto flex flex-col space-y-4">
-            {/* 1. Balance Card */}
-            <section className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
+            {/* 1. Clickable Balance Card (Total Deposited + Investments) */}
+            <button
+              type="button"
+              onClick={() => setBalanceModalOpen(true)}
+              className="w-full text-left p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500/60 dark:hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all space-y-3 cursor-pointer group"
+            >
               <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span className="font-semibold">Balance</span>
-                <span className="font-mono text-[11px] text-teal-600 dark:text-teal-400 font-semibold">USDT</span>
+                <span className="font-semibold flex items-center gap-1.5">
+                  <Wallet className="w-4 h-4 text-teal-500" />
+                  <span>Balance (Deposits + Investments)</span>
+                </span>
+                <span className="flex items-center gap-1 font-mono text-[11px] text-teal-600 dark:text-teal-400 font-semibold">
+                  <span>USDT</span>
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </span>
               </div>
               <div className="text-3xl sm:text-4xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white break-words">
-                ${fintechState.sampleBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${totalBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                <span className="text-slate-500 dark:text-slate-400">Active Yield Allocation</span>
-                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                  +${fintechState.investedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Deposited Available</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                    ${depositedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Invested Amount</span>
+                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                    +${investedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
+                  </span>
+                </div>
+              </div>
+              <div className="text-[11px] text-teal-600 dark:text-teal-400 font-medium flex items-center justify-between pt-1">
+                <span>Tap to view balance breakdown, deposit &amp; withdraw</span>
+                <span className="font-mono">Manage Funds →</span>
+              </div>
+            </button>
+
+            {/* 2. Clickable Tasks Completed Card */}
+            <button
+              type="button"
+              onClick={() => {
+                setTasksOverviewTab('completed');
+                setTasksOverviewModalOpen(true);
+              }}
+              className="w-full text-left p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500/60 dark:hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all space-y-3 cursor-pointer group"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <CheckSquare className="w-4 h-4 text-teal-500" />
+                  <span>Tasks Completed</span>
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                  <Lock className="w-3 h-3" />
+                  <span>Locked Funds · KYC Coming Soon</span>
                 </span>
               </div>
-            </section>
-
-            {/* 2. Tasks Completed Card */}
-            <section className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
-              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span className="font-semibold">Tasks Completed</span>
-                <CheckSquare className="w-4 h-4 text-teal-500" />
-              </div>
-              <div className="text-3xl sm:text-4xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white">
-                {fintechState.tasksCompletedCount}
+              <div className="flex items-baseline justify-between gap-3">
+                <div className="text-3xl sm:text-4xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white">
+                  {completedTasksList.length}
+                </div>
+                <div className="text-right">
+                  <div className="text-[11px] text-slate-400">Task Balance (Locked)</div>
+                  <div className="text-sm font-mono font-bold text-amber-600 dark:text-amber-400">
+                    ${lockedTaskBalanceUSDT.toFixed(2)} USDT
+                  </div>
+                </div>
               </div>
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                <span>Remaining Active</span>
-                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                  {remainingActiveTasks} available
+                <span>Not Yet Done: <strong className="text-slate-700 dark:text-slate-300 font-mono">{pendingTasksList.length}</strong> · Upcoming: <strong className="text-amber-600 dark:text-amber-400 font-mono">{UPCOMING_TASK_CATEGORIES.length}</strong></span>
+                <span className="text-teal-600 dark:text-teal-400 font-semibold flex items-center gap-0.5">
+                  <span>Open Tasks</span>
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </div>
-            </section>
+            </button>
 
-            {/* 3. Aethel Balance (Mining) Card */}
-            <section className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
+            {/* 3. Clickable Aethel Balance (Mining) Card */}
+            <button
+              type="button"
+              onClick={() => setMiningModalOpen(true)}
+              className="w-full text-left p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500/60 dark:hover:border-teal-500/50 shadow-sm hover:shadow-md transition-all space-y-4 cursor-pointer group"
+            >
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span className="font-semibold flex items-center gap-1.5">
@@ -267,18 +448,25 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   <span className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-teal-600 dark:text-teal-400">
                     <span
                       className={`w-2 h-2 rounded-full ${
-                        isMiningActive ? 'bg-emerald-500 animate-pulse' : isCycleExpired ? 'bg-teal-500' : 'bg-slate-400'
+                        isMiningActive ? 'bg-emerald-500 animate-pulse' : isCycleClosed ? 'bg-amber-500' : 'bg-slate-400'
                       }`}
                     />
-                    <span>{isMiningActive ? 'Active' : isCycleExpired ? 'Cycle Complete' : 'Paused'}</span>
+                    <span>{isMiningActive ? 'Active' : isCycleClosed ? 'Closed (24H)' : 'Ready'}</span>
+                    <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </span>
                 </div>
                 <div className="text-3xl sm:text-4xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white">
                   {fintechState.aethelBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
                   <span className="text-sm font-semibold text-teal-600 dark:text-teal-400">AETHEL</span>
                 </div>
-                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-medium">
-                  ≈ ${(fintechState.aethelBalance * TOKEN_PRICE_USDT).toFixed(2)} USDT (${TOKEN_PRICE_USDT}/token)
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono font-medium">
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    ≈ ${(fintechState.aethelBalance * TOKEN_PRICE_USDT).toFixed(2)} USDT (${TOKEN_PRICE_USDT}/token)
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10px] font-sans font-bold">
+                    <Lock className="w-3 h-3" />
+                    <span>Locked · Awaiting KYC (Coming Soon)</span>
+                  </span>
                 </div>
               </div>
 
@@ -286,7 +474,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 <div>
                   <div className="text-[11px] text-slate-400">Mining Engine</div>
                   <div className="font-mono font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                    {isMiningActive ? 'Running' : isCycleExpired ? 'Completed' : 'Paused'}
+                    {isMiningActive ? 'Running' : isCycleClosed ? 'Closed' : 'Tap to Start'}
                   </div>
                 </div>
                 <div>
@@ -296,13 +484,13 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[11px] text-slate-400">Cycle Countdown</div>
+                  <div className="text-[11px] text-slate-400">Session Timer</div>
                   <div className="font-mono font-bold tabular-nums text-slate-900 dark:text-white mt-0.5">
-                    {cycleCountdown}
+                    {miningTimerDisplay}
                   </div>
                 </div>
               </div>
-            </section>
+            </button>
 
             {/* 4. Referrals Card (Strictly Last Item at Bottom) */}
             <section className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
@@ -328,6 +516,29 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         {/* 2. TASK MARKETPLACE (Accessed via Hamburger Menu -> Tasks) */}
         {activeNav === 'tasks' && (
           <section className="space-y-6 pt-2">
+            {/* Locked Task Earnings Banner */}
+            <div className="p-4 sm:p-5 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-500 text-white shrink-0">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                    Locked Funds · Awaiting KYC (Coming Soon)
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                    Task rewards accumulate in your Locked Task Balance until KYC verification launches.
+                  </p>
+                </div>
+              </div>
+              <div className="text-left sm:text-right shrink-0">
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">Task Locked Balance</div>
+                <div className="text-xl font-extrabold font-mono text-amber-700 dark:text-amber-300">
+                  ${lockedTaskBalanceUSDT.toFixed(2)} USDT
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -337,7 +548,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   </span>
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Complete app ratings, location evaluations, surveys, and applications to earn immediate rewards.
+                  Complete app ratings, location evaluations, surveys, and applications to earn task rewards.
                 </p>
               </div>
 
@@ -354,7 +565,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
               </div>
             </div>
 
-            {/* Interactive Category Filter Tabs (Requirement: Organized in tabs/categories) */}
+            {/* Interactive Category Filter Tabs */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none text-xs max-w-full">
               {categories.map((cat) => {
                 const isSelected = selectedCategory === cat;
@@ -362,7 +573,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`min-h-[44px] sm:min-h-0 px-3.5 py-2 rounded-xl font-semibold whitespace-nowrap shrink-0 transition-all ${
+                    className={`min-h-[44px] sm:min-h-0 px-3.5 py-2 rounded-xl font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/20'
                         : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -374,7 +585,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
               })}
             </div>
 
-            {/* Task Card Grid (Requirement: title, short description, sample reward, estimated time, difficulty, and a "Start" button) */}
+            {/* Task Card Grid */}
             {filteredTasks.length === 0 ? (
               <div className="p-12 text-center rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <p className="text-xs text-slate-400">
@@ -396,7 +607,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                       }`}
                     >
                       <div className="space-y-3">
-                        {/* Top Category Badge & Difficulty */}
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-400">
                             {getCategoryBadgeIcon(task.category)}
@@ -407,7 +617,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                           </span>
                         </div>
 
-                        {/* Task Title & Description */}
                         <div>
                           <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-1">
                             {task.title}
@@ -417,7 +626,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                           </p>
                         </div>
 
-                        {/* Metadata: Est. Time & Reward */}
                         <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
                           <div className="flex items-center gap-1 text-slate-400">
                             <Clock className="w-3.5 h-3.5" />
@@ -430,18 +638,17 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                         </div>
                       </div>
 
-                      {/* Start / Completed Button */}
                       <div className="pt-2">
                         {isCompleted ? (
                           <div className="w-full min-h-[44px] py-2 px-3 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300/60 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1.5">
                             <CheckCircle2 className="w-4 h-4" />
-                            <span>Task completed (demo)</span>
+                            <span>Completed (Locked · Awaiting KYC)</span>
                           </div>
                         ) : (
                           <button
                             type="button"
                             onClick={() => setActiveTaskModal(task)}
-                            className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs transition-all shadow-md shadow-teal-600/20 flex items-center justify-center gap-1.5 group"
+                            className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs transition-all shadow-md shadow-teal-600/20 flex items-center justify-center gap-1.5 group cursor-pointer"
                           >
                             <span>Start Task</span>
                             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -453,6 +660,48 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 })}
               </div>
             )}
+
+            {/* Upcoming Earning Categories (Coming Soon) */}
+            <div className="pt-4 space-y-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Upcoming Task Streams</span>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase">
+                    Coming Soon
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  New media, social review, and freelance task streams launching soon.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {UPCOMING_TASK_CATEGORIES.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 flex flex-col justify-between space-y-3"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {getUpcomingIcon(item.id)}
+                          <span>{item.title}</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                          Coming Soon
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-mono">
+                      <span className="text-slate-400">Est. Reward</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{item.estimatedReward}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
         )}
 
@@ -771,30 +1020,56 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         {activeNav === 'wallet' && (
           <section className="space-y-6">
             <div className="p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-5">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Wallet className="w-5 h-5 text-teal-500" />
                   <span>Cryptocurrency Custody & Ledger</span>
                 </h3>
                 <span className="text-xs font-mono font-bold text-teal-600 dark:text-teal-400">
-                  ${fintechState.sampleBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT Available
+                  Total: ${totalBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
                 </span>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Total Balance (Deposits + Investments)</span>
+                  <span className="text-base font-extrabold font-mono text-slate-900 dark:text-white mt-0.5 block">
+                    ${totalBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Deposited Available</span>
+                  <span className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+                    ${depositedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Invested Amount</span>
+                  <span className="text-base font-extrabold font-mono text-blue-600 dark:text-blue-400 mt-0.5 block">
+                    ${investedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
+                  </span>
+                </div>
+              </div>
+
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Deposit digital assets or execute audited withdrawals directly to external Web3 cold-storage addresses.
               </p>
               <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-1">
                 <button
+                  type="button"
                   onClick={() => setDepositModalOpen(true)}
-                  className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-semibold hover:bg-teal-500 cursor-pointer"
+                  className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-semibold hover:bg-teal-500 cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  New Deposit
+                  <ArrowDownLeft className="w-4 h-4" />
+                  <span>Deposit Funds</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setWithdrawModalOpen(true)}
-                  className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Request Withdrawal
+                  <ArrowUpRight className="w-4 h-4" />
+                  <span>Request Withdrawal</span>
                 </button>
               </div>
             </div>
@@ -879,6 +1154,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         onClose={() => setDepositModalOpen(false)}
         onSuccess={() => {
           setDepositModalOpen(false);
+          api.getUserFintechStateFromCloud().then((cloud) => {
+            if (cloud) {
+              onUpdateFintechState((prev) => ({ ...prev, ...cloud }));
+            }
+          }).catch(console.error);
           showToast('Deposit record logged. Blockchain verification queue active.');
         }}
       />
@@ -897,6 +1177,437 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
           showToast('Withdrawal submitted for compliance review.');
         }}
       />
+
+      {/* 1. Balance Breakdown Modal (Deposited + Invested + Deposit/Withdraw Actions) */}
+      {balanceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    Balance &amp; Custody Overview
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Total deposited balances plus active investments
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBalanceModalOpen(false)}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                aria-label="Close balance modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-5">
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950 text-white border border-slate-800 space-y-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-teal-300">
+                  Total Balance (Deposits + Investments)
+                </span>
+                <div className="text-3xl sm:text-4xl font-extrabold font-mono tabular-nums">
+                  ${totalBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                  <span className="text-sm font-semibold text-teal-400">USDT</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Increases automatically with new deposits and allocated investment capital.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Deposited Balance</span>
+                  <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                    ${depositedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <span className="text-[11px] text-slate-400 block">Liquid &amp; withdrawable</span>
+                </div>
+
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Invested Amount</span>
+                  <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400">
+                    ${investedBalanceUSDT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <span className="text-[11px] text-slate-400 block">Accruing 2.0% weekly</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBalanceModalOpen(false);
+                    setDepositModalOpen(true);
+                  }}
+                  className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-teal-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <ArrowDownLeft className="w-4 h-4" />
+                  <span>Deposit</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBalanceModalOpen(false);
+                    setWithdrawModalOpen(true);
+                  }}
+                  className="w-full min-h-[44px] py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <ArrowUpRight className="w-4 h-4" />
+                  <span>Withdrawal</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Tasks Overview Modal (Completed, Not Yet Done, Upcoming + Locked Funds Awaiting KYC) */}
+      {tasksOverviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                  <CheckSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    Tasks &amp; Locked Earnings
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Review completed tasks, remaining tasks, and upcoming task streams
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTasksOverviewModalOpen(false)}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                aria-label="Close tasks overview modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
+              {/* Locked Task Balance Banner */}
+              <div className="p-4 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/80 dark:bg-amber-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-amber-500 text-white shrink-0 mt-0.5">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      Locked Funds · Awaiting KYC (Coming Soon)
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                      Task rewards are held in Locked Funds until KYC identity verification launches.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-left sm:text-right shrink-0">
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">Task Balance</div>
+                  <div className="text-xl font-extrabold font-mono text-amber-700 dark:text-amber-300">
+                    ${lockedTaskBalanceUSDT.toFixed(2)} USDT
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTasksOverviewTab('completed')}
+                  className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    tasksOverviewTab === 'completed'
+                      ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  Completed ({completedTasksList.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTasksOverviewTab('pending')}
+                  className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    tasksOverviewTab === 'pending'
+                      ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  Not Yet Done ({pendingTasksList.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTasksOverviewTab('upcoming')}
+                  className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    tasksOverviewTab === 'upcoming'
+                      ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  Upcoming ({UPCOMING_TASK_CATEGORIES.length})
+                </button>
+              </div>
+
+              {/* Tab Panels */}
+              {tasksOverviewTab === 'completed' && (
+                <div className="space-y-2.5">
+                  {completedTasksList.length === 0 ? (
+                    <div className="p-6 text-center rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-400">
+                      No tasks completed yet. Switch to &ldquo;Not Yet Done&rdquo; to complete your first task.
+                    </div>
+                  ) : (
+                    completedTasksList.map((task) => (
+                      <div
+                        key={task.id}
+                        className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/30 dark:bg-emerald-950/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            {getCategoryBadgeIcon(task.category)}
+                            <span>{task.category}</span>
+                          </div>
+                          <div className="text-sm font-bold text-slate-900 dark:text-white">
+                            {task.title}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                          <div className="text-right font-mono">
+                            <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                              +${task.rewardUSDT.toFixed(2)} USDT
+                            </div>
+                            <div className="text-[10px] text-amber-600 dark:text-amber-400 font-sans font-semibold">
+                              Locked · Awaiting KYC
+                            </div>
+                          </div>
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {tasksOverviewTab === 'pending' && (
+                <div className="space-y-2.5">
+                  {pendingTasksList.length === 0 ? (
+                    <div className="p-6 text-center rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-400">
+                      All currently listed tasks have been completed! Check Upcoming streams for new releases.
+                    </div>
+                  ) : (
+                    pendingTasksList.map((task) => (
+                      <div
+                        key={task.id}
+                        className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            {getCategoryBadgeIcon(task.category)}
+                            <span>{task.category}</span>
+                            <span>·</span>
+                            <span className="font-mono">{task.estimatedTime}</span>
+                          </div>
+                          <div className="text-sm font-bold text-slate-900 dark:text-white">
+                            {task.title}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                          <div className="font-mono text-xs font-bold text-teal-600 dark:text-teal-400">
+                            +${task.rewardUSDT.toFixed(2)} USDT
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTasksOverviewModalOpen(false);
+                              setActiveTaskModal(task);
+                            }}
+                            className="min-h-[40px] px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <span>Start Task</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {tasksOverviewTab === 'upcoming' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {UPCOMING_TASK_CATEGORIES.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 flex flex-col justify-between space-y-2.5"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
+                            {getUpcomingIcon(item.id)}
+                            <span>{item.title}</span>
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 text-[10px] font-bold shrink-0">
+                            Coming Soon
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          {item.description}
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-slate-200/70 dark:border-slate-700/60 flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-slate-400">Est. Payout</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-200">{item.estimatedReward}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Mining Control Modal (00:00:01 -> 23:59:59 Real-Time Counter + Locked KYC Balance) */}
+      {miningModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    AETHEL Mining Session
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    24-hour cycle counts 00:00:01 to 23:59:59 then closes
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMiningModalOpen(false)}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                aria-label="Close mining modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-5">
+              {/* Locked Mined Balance Banner */}
+              <div className="p-4 rounded-2xl bg-slate-900 text-white border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-teal-300">
+                    Mined AETHEL Balance
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-[10px] font-bold">
+                    <Lock className="w-3 h-3" />
+                    <span>Locked · Awaiting KYC (Coming Soon)</span>
+                  </span>
+                </div>
+                <div>
+                  <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums">
+                    {fintechState.aethelBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                    <span className="text-sm text-teal-400">AETHEL</span>
+                  </div>
+                  <div className="text-xs font-mono text-emerald-400 mt-0.5">
+                    ≈ ${(fintechState.aethelBalance * TOKEN_PRICE_USDT).toFixed(2)} USDT (${TOKEN_PRICE_USDT}/token · Locked awaiting KYC)
+                  </div>
+                </div>
+              </div>
+
+              {/* Real-Time Timer & Progress */}
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-teal-500" />
+                    <span>24H Cycle Counter (00:00:01 → 23:59:59)</span>
+                  </span>
+                  <span
+                    className={`font-mono font-bold text-[11px] ${
+                      isMiningActive
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : isCycleClosed
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    {isMiningActive ? 'ACTIVE' : isCycleClosed ? 'CLOSED (24H COMPLETE)' : 'READY'}
+                  </span>
+                </div>
+
+                <div className="text-3xl font-extrabold font-mono tabular-nums text-center py-2 text-slate-900 dark:text-white tracking-wider">
+                  {miningTimerDisplay}
+                </div>
+
+                <div className="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all duration-500"
+                    style={{ width: `${miningProgressPercent}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                  <span>Hash Rate: {fintechState.mining.hashRate.toFixed(2)} TH/s</span>
+                  <span>Session Mined: +{fintechState.mining.sessionMinedAethel.toFixed(2)} AETHEL</span>
+                </div>
+              </div>
+
+              {/* Primary Mining Button */}
+              <div className="space-y-2.5">
+                {isCycleClosed ? (
+                  <button
+                    type="button"
+                    onClick={handleStartOrRestartMining}
+                    className="w-full min-h-[44px] py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Restart 24H Mining Cycle (00:00:01)</span>
+                  </button>
+                ) : isMiningActive ? (
+                  <div className="w-full min-h-[44px] py-3 px-4 rounded-xl bg-emerald-600/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Mining Active ({miningTimerDisplay} / 23:59:59) — Auto-closes after 24H</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStartOrRestartMining}
+                    className="w-full min-h-[44px] py-3 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-teal-600/25 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Start Mining (00:00:01 → 23:59:59)</span>
+                  </button>
+                )}
+
+                {onNavigate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMiningModalOpen(false);
+                      onNavigate('mining');
+                    }}
+                    className="w-full min-h-[44px] py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Open Full Mining Console</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

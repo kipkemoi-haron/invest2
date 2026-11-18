@@ -220,6 +220,8 @@ export interface MiningState {
   isMining: boolean;
   sessionStartedAt: number | null;
   sessionElapsedSeconds: number;
+  sessionClosed?: boolean;
+  sessionBaseAethel?: number;
   totalMinedAethel: number;
   sessionMinedAethel: number;
   hashRate: number;

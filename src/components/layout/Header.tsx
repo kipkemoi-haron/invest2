@@ -109,43 +109,54 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
               <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
-            {user && (
-              <>
-                <button
-                  onClick={() => handleLinkClick('tasks')}
-                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
-                    currentView === 'tasks'
-                      ? 'bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400'
-                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <CheckSquare className="w-4 h-4 text-teal-500" />
-                    <span>Tasks</span>
-                  </span>
-                  <span className="text-[10px] font-mono bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 px-1.5 py-0.5 rounded">
-                    Earn
-                  </span>
-                </button>
+            <button
+              onClick={() => handleLinkClick('wallet')}
+              className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                currentView === 'wallet'
+                  ? 'bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400'
+                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-teal-500" />
+                <span>Wallet</span>
+              </span>
+              <span className="text-[10px] font-mono text-slate-400">Deposit · Withdraw</span>
+            </button>
 
-                <button
-                  onClick={() => handleLinkClick('invest')}
-                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
-                    currentView === 'invest'
-                      ? 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400'
-                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-blue-500" />
-                    <span>My Investments</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-bold">
-                    2.0%/wk
-                  </span>
-                </button>
-              </>
-            )}
+            <button
+              onClick={() => handleLinkClick('invest')}
+              className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                currentView === 'invest'
+                  ? 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400'
+                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-blue-500" />
+                <span>My Investments</span>
+              </span>
+              <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-bold">
+                2.0%/wk
+              </span>
+            </button>
+
+            <button
+              onClick={() => handleLinkClick('tasks')}
+              className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                currentView === 'tasks'
+                  ? 'bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400'
+                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-teal-500" />
+                <span>Tasks</span>
+              </span>
+              <span className="text-[10px] font-mono bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 px-1.5 py-0.5 rounded">
+                Earn
+              </span>
+            </button>
 
             <button
               onClick={() => handleLinkClick('mining')}
@@ -179,21 +190,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
 
             {user && (
               <>
-                <button
-                  onClick={() => handleLinkClick('wallet')}
-                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
-                    currentView === 'wallet'
-                      ? 'bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400'
-                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Wallet className="w-4 h-4 text-teal-500" />
-                    <span>Wallet</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400">Deposit · Withdraw</span>
-                </button>
-
                 <button
                   onClick={() => handleLinkClick('history')}
                   className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
